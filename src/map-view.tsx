@@ -11,7 +11,6 @@ import {
   ViewportData,
 } from "react-three-fiber";
 import { animated, useSpring, SpringValue, to } from "@react-spring/three";
-import type { MediaType } from "../server/media-types";
 import { useGesture } from "react-use-gesture";
 import styled from "@emotion/styled/macro";
 import { darken, lighten } from "polished";
@@ -28,6 +27,7 @@ import type {
 import { useContextBridge } from "./hooks/use-context-bridge";
 import { MapGridEntity, MapTokenEntity } from "./map-typings";
 import { useIsKeyPressed } from "./hooks/use-is-key-pressed";
+import * as Icon from "./feather-icons";
 import { TextureLoader } from "three";
 import { ReactEventHandlers } from "react-use-gesture/dist/types";
 import { useFragment, useSubscription } from "relay-hooks";
@@ -934,90 +934,6 @@ const TextureElement = (props: {
   );
 };
 
-// Component for rendering video textures with HTMLVideoElement
-const VideoTextureElement = (props: {
-  url: string;
-  dragProps: () => ReactEventHandlers;
-  initialRadius: number;
-  isHover: boolean;
-  opacity: number;
-  rotation: SpringValue<number>;
-}) => {
-  const videoElement = React.useRef<HTMLVideoElement | null>(null);
-  const videoTexture = React.useRef<THREE.VideoTexture | null>(null);
-
-  // Create and setup video element and texture
-  React.useEffect(() => {
-    if (!videoElement.current) {
-      const video = document.createElement("video");
-      video.src = props.url;
-      video.autoplay = true;
-      video.loop = true;
-      video.playsInline = true;
-      // Mute for autoplay to work without user interaction
-      video.muted = true;
-      video.crossOrigin = "anonymous";
-      videoElement.current = video;
-
-      // Start playing
-      video.play().catch((err) => {
-        console.error("Video playback failed:", err);
-      });
-
-      // Create texture from video
-      const texture = new THREE.VideoTexture(video);
-      texture.minFilter = THREE.LinearFilter;
-      texture.magFilter = THREE.LinearFilter;
-      videoTexture.current = texture;
-    }
-
-    return () => {
-      if (videoElement.current) {
-        videoElement.current.pause();
-        videoElement.current.src = "";
-      }
-      if (videoTexture.current) {
-        videoTexture.current.dispose();
-      }
-    };
-  }, [props.url]);
-
-  // Update frame during animation loop
-  useFrame(() => {
-    if (videoTexture.current) {
-      videoTexture.current.needsUpdate = true;
-    }
-  });
-
-  if (!videoTexture.current) {
-    return null;
-  }
-
-  return (
-    <animated.mesh
-      renderOrder={LayerRenderOrder.tokenGesture}
-      // @ts-expect-error:
-      rotation={props.rotation.to<[number, number, number]>((value) => [
-        0,
-        0,
-        (-value * Math.PI) / 180, // Convert degrees to radians
-      ])}
-      {...props.dragProps()}
-    >
-      <circleBufferGeometry
-        attach="geometry"
-        args={[props.initialRadius, 128]}
-      />
-      <meshBasicMaterial
-        attach="material"
-        map={videoTexture.current}
-        transparent={true}
-        opacity={props.isHover ? props.opacity + 0.1 : props.opacity}
-      />
-    </animated.mesh>
-  );
-};
-
 // const SVGELement = (props: {
 //   url: string;
 //   dragProps: () => ReactEventHandlers;
@@ -1348,10 +1264,9 @@ const FogRenderer = React.memo(
 
 const MapRenderer = (props: {
   map: mapView_MapRendererFragment$key;
-  mapImage: HTMLImageElement;
-  mapImageTexture: THREE.Texture;
-  urlTexture: THREE.Texture | null;
-  mediaType: string;
+  mapTexture: THREE.Texture;
+  imageNaturalWidth: number;
+  imageNaturalHeight: number;
   fogTexture: THREE.Texture;
   viewport: ViewportData;
   scale: SpringValue<[number, number, number]>;
@@ -1371,10 +1286,7 @@ const MapRenderer = (props: {
             attach="geometry"
             args={[props.dimensions.width, props.dimensions.height]}
           />
-          <meshStandardMaterial
-            attach="material"
-            map={props.urlTexture || props.mapImageTexture}
-          />
+          <meshStandardMaterial attach="material" map={props.mapTexture} />
         </mesh>
         {map.grid &&
         (isDungeonMaster ? map.showGrid : map.showGridToPlayers) ? (
@@ -1382,8 +1294,8 @@ const MapRenderer = (props: {
             grid={map.grid}
             dimensions={props.dimensions}
             factor={props.factor}
-            imageHeight={props.mapImage.naturalHeight}
-            imageWidth={props.mapImage.naturalWidth}
+            imageHeight={props.imageNaturalHeight}
+            imageWidth={props.imageNaturalWidth}
           />
         ) : null}
         <FogRenderer
@@ -1422,7 +1334,9 @@ const MapViewRendererFragment = graphql`
 
 const MapViewRenderer = (props: {
   map: mapView_MapViewRendererFragment$key;
-  mapImage: HTMLImageElement;
+  mapImage: HTMLImageElement | null;
+  mapVideo: HTMLVideoElement | null;
+  isAnimating: boolean;
   fogImage: HTMLImageElement | null;
   controlRef?: React.MutableRefObject<MapControlInterface | null>;
   activeTool: MapTool | null;
@@ -1443,15 +1357,21 @@ const MapViewRenderer = (props: {
     return Math.sqrt(maximumTextureSize * 1024);
   }, [maximumTextureSize]);
 
+  // Resolve natural dimensions from whichever media element is available
+  const mediaNaturalWidth =
+    props.mapImage?.naturalWidth ?? props.mapVideo?.videoWidth ?? 1280;
+  const mediaNaturalHeight =
+    props.mapImage?.naturalHeight ?? props.mapVideo?.videoHeight ?? 720;
+
   const optimalDimensions = React.useMemo(
     () =>
       getOptimalDimensions(
-        props.mapImage.naturalWidth,
-        props.mapImage.naturalHeight,
+        mediaNaturalWidth,
+        mediaNaturalHeight,
         maximumSideLength,
         maximumSideLength
       ),
-    [maximumSideLength, props.mapImage]
+    [maximumSideLength, mediaNaturalWidth, mediaNaturalHeight]
   );
 
   const [mapCanvas] = React.useState(() => {
@@ -1469,9 +1389,67 @@ const MapViewRenderer = (props: {
 
   const [mapTexture] = React.useState(() => new THREE.CanvasTexture(mapCanvas));
   const [fogTexture] = React.useState(() => new THREE.CanvasTexture(fogCanvas));
-  const [urlTexture, setUrlTexture] = React.useState<THREE.Texture | null>(
-    null
-  );
+
+  // GIF: draw the DOM-attached img to a canvas each frame → CanvasTexture.
+  // The browser animates the GIF on the DOM img; we copy the current frame to canvas.
+  const [gifCanvas] = React.useState<HTMLCanvasElement | null>(() => {
+    if (map.mediaType !== "gif") return null;
+    const canvas = document.createElement("canvas");
+    canvas.width = optimalDimensions.width;
+    canvas.height = optimalDimensions.height;
+    return canvas;
+  });
+
+  const [gifTexture] = React.useState<THREE.CanvasTexture | null>(() => {
+    if (map.mediaType === "gif" && gifCanvas) {
+      const tex = new THREE.CanvasTexture(gifCanvas);
+      tex.minFilter = THREE.LinearFilter;
+      tex.magFilter = THREE.LinearFilter;
+      return tex;
+    }
+    return null;
+  });
+
+  // Keep gif canvas dimensions in sync with optimalDimensions
+  React.useEffect(() => {
+    if (!gifCanvas || map.mediaType !== "gif") return;
+    gifCanvas.width = optimalDimensions.width;
+    gifCanvas.height = optimalDimensions.height;
+  }, [gifCanvas, optimalDimensions, map.mediaType]);
+
+  // Video: THREE.VideoTexture automatically reads new frames from the video element.
+  const [videoTexture] = React.useState<THREE.VideoTexture | null>(() => {
+    if (map.mediaType === "video" && props.mapVideo) {
+      const tex = new THREE.VideoTexture(props.mapVideo);
+      tex.minFilter = THREE.LinearFilter;
+      tex.magFilter = THREE.LinearFilter;
+      return tex;
+    }
+    return null;
+  });
+
+  // Dispose animated textures on unmount
+  React.useEffect(() => {
+    return () => {
+      gifTexture?.dispose();
+      videoTexture?.dispose();
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Animate GIF: draw current browser-animated frame to canvas, then update texture
+  useFrame(() => {
+    if (gifTexture && gifCanvas && props.mapImage && props.isAnimating) {
+      const ctx = gifCanvas.getContext("2d");
+      if (ctx) {
+        ctx.drawImage(props.mapImage, 0, 0, gifCanvas.width, gifCanvas.height);
+        gifTexture.needsUpdate = true;
+      }
+    }
+  });
+
+  // The texture passed to the map mesh
+  const activeMapTexture: THREE.Texture =
+    videoTexture ?? gifTexture ?? mapTexture;
 
   React.useEffect(() => {
     set({
@@ -1500,32 +1478,21 @@ const MapViewRenderer = (props: {
     fogTexture.needsUpdate = true;
   }, [optimalDimensions, fogCanvas, maximumSideLength, props.fogImage]);
 
+  // Draw to canvas only for static images (GIF and video use their own textures)
   React.useEffect(() => {
+    if (map.mediaType !== "image") return;
     mapCanvas.width = optimalDimensions.width;
     mapCanvas.height = optimalDimensions.height;
-    const context = mapCanvas.getContext("2d")!;
-
-    // For GIFs, don't draw to canvas - use urlTexture loaded via TextureLoader instead
-    if (map.mediaType === "gif") {
-      // Clear canvas for GIFs (they'll use urlTexture)
-      context.clearRect(0, 0, mapCanvas.width, mapCanvas.height);
-    } else {
-      // Draw non-GIF images normally (static images)
-      if (props.mapImage && props.mapImage instanceof HTMLImageElement) {
-        context.drawImage(
-          props.mapImage,
-          0,
-          0,
-          mapCanvas.width,
-          mapCanvas.height
-        );
-      } else {
-        // Fallback: clear to black if no image
-        context.fillStyle = "#000000";
-        context.fillRect(0, 0, mapCanvas.width, mapCanvas.height);
-      }
+    if (props.mapImage) {
+      const context = mapCanvas.getContext("2d")!;
+      context.drawImage(
+        props.mapImage,
+        0,
+        0,
+        mapCanvas.width,
+        mapCanvas.height
+      );
     }
-
     mapTexture.needsUpdate = true;
   }, [
     optimalDimensions,
@@ -1535,46 +1502,14 @@ const MapViewRenderer = (props: {
     map.mediaType,
   ]);
 
-  // Load GIF/video textures directly from URL to preserve animation
-  React.useEffect(() => {
-    // For GIFs, use TextureLoader to load directly from URL and preserve animation
-    if (map.mediaType === "gif") {
-      const textureLoader = new THREE.TextureLoader();
-      textureLoader.load(
-        map.mapImageUrl,
-        (texture) => {
-          // Configure texture for proper rendering
-          texture.magFilter = THREE.LinearFilter;
-          texture.minFilter = THREE.LinearFilter;
-          setUrlTexture(texture);
-        },
-        undefined,
-        (error) => {
-          console.error("Failed to load GIF texture:", error);
-          setUrlTexture(null);
-        }
-      );
-    } else {
-      // For other types, clear urlTexture
-      setUrlTexture(null);
-    }
-
-    return () => {
-      // Cleanup: dispose texture when component unmounts or mediaType changes
-      if (map.mediaType !== "gif") {
-        setUrlTexture(null);
-      }
-    };
-  }, [map.mediaType, map.mapImageUrl]);
-
   const dimensions = React.useMemo(() => {
     return getOptimalDimensions(
-      props.mapImage.naturalWidth,
-      props.mapImage.naturalHeight,
+      mediaNaturalWidth,
+      mediaNaturalHeight,
       viewport.width * 0.95,
       viewport.height * 0.95
     );
-  }, [props.mapImage, viewport]);
+  }, [mediaNaturalWidth, mediaNaturalHeight, viewport]);
 
   const isDragAllowed = React.useRef(true);
 
@@ -1779,17 +1714,16 @@ const MapViewRenderer = (props: {
       >
         <MapRenderer
           map={map}
-          mapImage={props.mapImage}
-          mapImageTexture={mapTexture}
-          urlTexture={urlTexture}
-          mediaType={map.mediaType}
+          mapTexture={activeMapTexture}
+          imageNaturalWidth={mediaNaturalWidth}
+          imageNaturalHeight={mediaNaturalHeight}
           fogTexture={fogTexture}
           viewport={viewport}
           markerRadius={20}
           scale={spring.scale}
           dimensions={dimensions}
           factor={
-            dimensions.width / props.mapImage.width / optimalDimensions.ratio
+            dimensions.width / mediaNaturalWidth / optimalDimensions.ratio
           }
           fogOpacity={props.fogOpacity}
         />
@@ -1807,8 +1741,31 @@ const MapViewRenderer = (props: {
 };
 
 const MapCanvasContainer = styled.div`
+  position: relative;
   height: 100%;
   touch-action: manipulation;
+`;
+
+const AnimationToggleButton = styled.button`
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.55);
+  color: white;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.15s;
+  &:hover {
+    opacity: 1;
+  }
 `;
 
 const MapFragment = graphql`
@@ -1837,6 +1794,9 @@ export const MapView = (props: {
   const [mapImage, setMapImage] = useResetState<HTMLImageElement | null>(null, [
     map.id,
   ]);
+  const [mapVideo, setMapVideo] = useResetState<HTMLVideoElement | null>(null, [
+    map.id,
+  ]);
   const [fogImage, setFogImage] = useResetState<HTMLImageElement | null>(null, [
     map.id,
   ]);
@@ -1844,9 +1804,34 @@ export const MapView = (props: {
   const cleanupMapImage = React.useRef<() => void>(() => {});
   const cleanupFogImage = React.useRef<() => void>(() => {});
 
+  const [isAnimating, setIsAnimating] = React.useState(true);
+
   const isDungeonMaster = React.useContext(IsDungeonMasterContext);
 
   React.useEffect(() => {
+    if (map.mediaType === "video") {
+      const video = document.createElement("video");
+      video.src = map.mapImageUrl;
+      video.autoplay = true;
+      video.loop = true;
+      video.muted = true;
+      video.playsInline = true;
+      video.crossOrigin = "anonymous";
+
+      const onMetadata = () => {
+        video.play().catch(console.error);
+        setMapVideo(video);
+      };
+      video.addEventListener("loadedmetadata", onMetadata);
+
+      return () => {
+        video.removeEventListener("loadedmetadata", onMetadata);
+        video.pause();
+        video.src = "";
+        setMapVideo(null);
+      };
+    }
+
     const mapImageTask = loadImage(map.mapImageUrl);
 
     cleanupMapImage.current = () => {
@@ -1862,7 +1847,29 @@ export const MapView = (props: {
       });
 
     return () => cleanupMapImage.current();
-  }, [map.mapImageUrl]);
+  }, [map.mapImageUrl, map.mediaType]);
+
+  // Attach GIF img to the DOM so the browser animates it; detach on cleanup or pause.
+  React.useEffect(() => {
+    if (map.mediaType !== "gif" || !mapImage || !isAnimating) return;
+    const img = mapImage;
+    img.style.cssText =
+      "position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;opacity:0;pointer-events:none;";
+    document.body.appendChild(img);
+    return () => {
+      if (img.parentNode) img.parentNode.removeChild(img);
+    };
+  }, [map.mediaType, mapImage, isAnimating]);
+
+  // Control video playback when isAnimating changes.
+  React.useEffect(() => {
+    if (!mapVideo) return;
+    if (isAnimating) {
+      mapVideo.play().catch(console.error);
+    } else {
+      mapVideo.pause();
+    }
+  }, [isAnimating, mapVideo]);
 
   const initialFog = React.useRef<boolean>(false);
 
@@ -1900,7 +1907,9 @@ export const MapView = (props: {
     return () => cleanupFogImage.current();
   }, [map.fogLiveImageUrl, map.fogProgressImageUrl, isDungeonMaster]);
 
-  return mapImage ? (
+  const isAnimatedMedia = map.mediaType === "gif" || map.mediaType === "video";
+
+  return mapImage || mapVideo ? (
     <MapCanvasContainer>
       <Canvas
         camera={{ position: [0, 0, 5] }}
@@ -1940,12 +1949,26 @@ export const MapView = (props: {
             map={map}
             activeTool={props.activeTool}
             mapImage={mapImage}
+            mapVideo={mapVideo}
+            isAnimating={isAnimating}
             fogImage={fogImage}
             controlRef={props.controlRef}
             fogOpacity={props.fogOpacity}
           />
         </ContextBridge>
       </Canvas>
+      {isAnimatedMedia && (
+        <AnimationToggleButton
+          onClick={() => setIsAnimating((v) => !v)}
+          title={isAnimating ? "Pause animation" : "Play animation"}
+        >
+          {isAnimating ? (
+            <Icon.Pause boxSize="20px" />
+          ) : (
+            <Icon.Play boxSize="20px" />
+          )}
+        </AnimationToggleButton>
+      )}
     </MapCanvasContainer>
   ) : null;
 };
