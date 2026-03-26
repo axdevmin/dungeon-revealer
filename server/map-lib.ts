@@ -7,6 +7,11 @@ import type { MapEntity, MapGridEntity, Maps } from "./maps";
 import * as auth from "./auth";
 import type { Settings } from "./settings";
 import { invalidateResourcesRT } from "./live-query-store";
+import {
+  MediaType,
+  validateMediaTypeExtension,
+  getMediaTypeFromExtension,
+} from "./media-types";
 
 type MapsDependency = {
   maps: Maps;
@@ -128,6 +133,7 @@ export const getPaginatedMaps = (params: {
 type MapImageUploadRegisterRecord = {
   id: string;
   fileExtension: string;
+  mediaType: MediaType;
 };
 
 export type MapImageUploadRegister = Map<string, MapImageUploadRegisterRecord>;
@@ -149,11 +155,25 @@ export type MapImageUploadRequestResult = {
 export const createMapImageUploadUrl = (params: {
   sha256: string;
   extension: string;
+  mediaType?: MediaType;
 }) =>
   pipe(
     auth.requireAdmin(),
     RT.chainW(() => RT.ask<MapImageUploadRegisterDependency>()),
     RT.chain((deps) => () => async () => {
+      // Auto-detect media type if not provided
+      const mediaType =
+        params.mediaType ||
+        getMediaTypeFromExtension(params.extension) ||
+        "image";
+
+      // Validate extension for media type
+      if (!validateMediaTypeExtension(mediaType, params.extension)) {
+        throw new Error(
+          `Extension ".${params.extension}" is not valid for media type "${mediaType}"`
+        );
+      }
+
       let record = deps.mapImageUploadRegister.get(params.sha256);
 
       const uuid = randomUUID();
@@ -164,6 +184,7 @@ export const createMapImageUploadUrl = (params: {
         record = {
           id: key,
           fileExtension: params.extension,
+          mediaType,
         };
       }
 
@@ -227,6 +248,7 @@ export const mapCreate = (params: {
         title: params.title,
         fileExtension: record.fileExtension,
         filePath: filePath,
+        mediaType: record.mediaType,
       });
 
       return {

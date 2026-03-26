@@ -314,6 +314,11 @@ type Map {
   showGrid: Boolean!
   showGridToPlayers: Boolean!
   tokens: [MapToken!]!
+
+  """
+  The type of media for the map background (image, gif, video, or video URL).
+  """
+  mediaType: MediaType!
 }
 
 type MapGrid {
@@ -340,6 +345,31 @@ type MapToken {
   isLocked: Boolean!
   tokenImage: TokenImage
   referenceId: ID
+}
+
+"""
+Type of media for map background (static image, GIF, video, or video URL)
+"""
+enum MediaType {
+  """
+  Static image (PNG, JPG, WebP, etc.)
+  """
+  image
+
+  """
+  Animated GIF
+  """
+  gif
+
+  """
+  Video file (MP4, WebM, OGG, etc.)
+  """
+  video
+
+  """
+  Video URL (YouTube, Vimeo, etc.)
+  """
+  video_url
 }
 
 type Mutation {
@@ -646,6 +676,11 @@ input MapImageRequestUploadInput {
   The extension of the file thats is going to be uploaded.
   """
   extension: String!
+
+  """
+  Type of media being uploaded. If not provided, will be auto-detected from extension.
+  """
+  mediaType: MediaType
 }
 
 union MapCreateResult = MapCreateError | MapCreateSuccess

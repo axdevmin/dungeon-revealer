@@ -197,6 +197,7 @@ const SelectMapModal_ActiveMap_MapFragment = graphql`
     id
     title
     mapImageUrl
+    mediaType
   }
 `;
 
@@ -252,7 +253,17 @@ const ActiveMap = (props: {
           overflowY: "scroll",
         }}
       >
-        <img src={activeMap.mapImageUrl} style={{ width: "100%" }} />
+        {activeMap.mediaType === "video" ? (
+          <video
+            src={activeMap.mapImageUrl}
+            style={{ width: "100%" }}
+            muted
+            playsInline
+            controls
+          />
+        ) : (
+          <img src={activeMap.mapImageUrl} style={{ width: "100%" }} />
+        )}
       </div>
       <div
         style={{

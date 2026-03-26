@@ -12,8 +12,37 @@ import { applyDecoder } from "../../apply-decoder";
 import { decodeImageId, GraphQLTokenImageType } from "./token-image";
 import { getTokenImageById } from "../../token-image-lib";
 import { randomUUID } from "crypto";
+import { MediaType } from "../../media-types";
 
 const sequenceRT = sequenceT(RT.readerTask);
+
+const GraphQLMediaTypeEnum = t.enumType<MediaType>({
+  name: "MediaType",
+  description:
+    "Type of media for map background (static image, GIF, video, or video URL)",
+  values: [
+    {
+      name: "image",
+      value: "image" as const,
+      description: "Static image (PNG, JPG, WebP, etc.)",
+    },
+    {
+      name: "gif",
+      value: "gif" as const,
+      description: "Animated GIF",
+    },
+    {
+      name: "video",
+      value: "video" as const,
+      description: "Video file (MP4, WebM, OGG, etc.)",
+    },
+    {
+      name: "video_url",
+      value: "video-url" as const,
+      description: "Video URL (YouTube, Vimeo, etc.)",
+    },
+  ],
+});
 
 const GraphQLMapTokenUpdateManyPropertiesInput = t.inputObjectType({
   name: "MapTokenUpdateManyPropertiesInput",
@@ -131,6 +160,11 @@ const GraphQLMapImageRequestUploadInputType = t.inputObjectType({
     extension: {
       type: t.NonNullInput(t.String),
       description: "The extension of the file thats is going to be uploaded.",
+    },
+    mediaType: {
+      type: GraphQLMediaTypeEnum,
+      description:
+        "Type of media being uploaded. If not provided, will be auto-detected from extension.",
     },
   }),
 });
@@ -338,7 +372,14 @@ export const mutationFields = [
       input: t.arg(t.NonNullInput(GraphQLMapImageRequestUploadInputType)),
     },
     resolve: (_, { input }, context) =>
-      RT.run(lib.createMapImageUploadUrl(input), context),
+      RT.run(
+        lib.createMapImageUploadUrl({
+          sha256: input.sha256,
+          extension: input.extension,
+          mediaType: input.mediaType as MediaType | undefined,
+        }),
+        context
+      ),
   }),
   t.field({
     name: "mapCreate",
@@ -585,6 +626,12 @@ const GraphQLMapType = t.objectType<MapEntity>({
         context.session.role === "admin"
           ? source.tokens
           : source.tokens.filter((token) => token.isVisibleForPlayers),
+    }),
+    t.field({
+      name: "mediaType",
+      description:
+        "The type of media for the map background (image, gif, video, or video URL).",
+      type: t.NonNull(GraphQLMediaTypeEnum),
     }),
   ],
 });

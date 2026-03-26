@@ -150,16 +150,26 @@ module.exports = ({ roleMiddleware, maps, settings, emitter }) => {
     });
 
     req.busboy.once("close", () => {
-      maps
-        .updateFogProgressImage(req.params.id, tmpFile)
-        .then((map) => {
-          emitter.emit("invalidate", `Map:${map.id}`);
-          res.status(200).json({
-            error: null,
-            data: mapMap(map),
-          });
-        })
-        .catch(handleUnexpectedError(res));
+      if (writeStream === null) return;
+
+      const proceed = () => {
+        maps
+          .updateFogProgressImage(req.params.id, tmpFile)
+          .then((map) => {
+            emitter.emit("invalidate", `Map:${map.id}`);
+            res.status(200).json({
+              error: null,
+              data: mapMap(map),
+            });
+          })
+          .catch(handleUnexpectedError(res));
+      };
+
+      if (writeStream.writableFinished) {
+        proceed();
+      } else {
+        writeStream.once("finish", proceed);
+      }
     });
   });
 
@@ -180,14 +190,26 @@ module.exports = ({ roleMiddleware, maps, settings, emitter }) => {
     });
 
     req.busboy.once("close", () => {
-      maps
-        .updateFogLiveImage(req.params.id, tmpFile)
-        .then((map) => {
-          settings.set("currentMapId", map.id);
-          emitter.emit("invalidate", "Query.activeMap");
-          res.json({ error: null, data: mapMap(map) });
-        })
-        .catch(handleUnexpectedError(res));
+      if (writeStream === null) return;
+
+      const proceed = () => {
+        maps
+          .updateFogLiveImage(req.params.id, tmpFile)
+          .then((map) => {
+            settings.set("currentMapId", map.id);
+            emitter.emit("invalidate", "Query.activeMap");
+            res.json({ error: null, data: mapMap(map) });
+          })
+          .catch(handleUnexpectedError(res));
+      };
+
+      // Wait for the write stream to fully flush to disk before processing.
+      // busboy "close" can fire before the writable stream has finished.
+      if (writeStream.writableFinished) {
+        proceed();
+      } else {
+        writeStream.once("finish", proceed);
+      }
     });
   });
 
