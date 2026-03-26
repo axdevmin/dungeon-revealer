@@ -2,6 +2,7 @@ import path from "path";
 import fs from "fs-extra";
 import junk from "junk";
 import { randomUUID } from "crypto";
+import { MediaType } from "./media-types";
 
 const isDirectory = (source: string) => fs.lstatSync(source).isDirectory();
 
@@ -97,6 +98,7 @@ type LegacyMapEntity = {
     y: number;
     sideLength: number;
   };
+  mediaType?: MediaType;
 };
 
 export type MapEntity = {
@@ -111,6 +113,7 @@ export type MapEntity = {
   tokens: Array<any>;
   fogLiveRevision: string;
   fogProgressRevision: string;
+  mediaType: MediaType;
 };
 
 export class Maps {
@@ -175,6 +178,10 @@ export class Maps {
           "fogLiveRevision" in rawMap
             ? rawMap.fogProgressRevision
             : randomUUID(),
+        mediaType:
+          "mediaType" in rawMap && rawMap.mediaType
+            ? rawMap.mediaType
+            : "image",
       };
 
       return map;
@@ -197,10 +204,12 @@ export class Maps {
     title,
     filePath,
     fileExtension,
+    mediaType = "image",
   }: {
     title: string;
     filePath: string;
     fileExtension: string | null;
+    mediaType?: MediaType;
   }) {
     const id = randomUUID();
     return this._processTask<MapEntity>(`map:${id}`, async () => {
@@ -220,6 +229,7 @@ export class Maps {
         tokens: [],
         fogProgressRevision: randomUUID(),
         fogLiveRevision: randomUUID(),
+        mediaType,
       };
 
       await fs.move(filePath, path.join(this._buildMapFolderPath(id), mapPath));

@@ -14,6 +14,8 @@ import { AnimatedDotDotDot } from "../animated-dot-dot-dot";
 import { generateSHA256FileHash } from "../crypto";
 import { importFileModal_MapImageRequestUploadMutation } from "./__generated__/importFileModal_MapImageRequestUploadMutation.graphql";
 import { importFileModal_MapCreateMutation } from "./__generated__/importFileModal_MapCreateMutation.graphql";
+import type { MediaType } from "../../server/media-types";
+import { getMediaTypeFromExtension } from "../../server/media-types";
 
 const OrSeperator = styled.span`
   padding-left: 18px;
@@ -38,6 +40,16 @@ const FileTitle = styled.div`
   margin-top: 8px;
 `;
 
+const MediaTypeSelector = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 12px;
+  background-color: rgba(0, 0, 0, 0.05);
+  border-radius: 4px;
+`;
+
 const extractDefaultTitleFromFileName = (fileName: string) => {
   const parts = fileName.split(".");
   if (parts.length < 2) return fileName;
@@ -45,7 +57,18 @@ const extractDefaultTitleFromFileName = (fileName: string) => {
   return parts.join(".");
 };
 
-const validImageFileTypes = ["image/png", "image/jpeg"];
+// Valid file types for map media (images, GIFs, and videos)
+const validMapMediaFileTypes = [
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "image/bmp",
+  "image/gif", // GIF animations
+  "video/mp4",
+  "video/webm",
+  "video/ogg",
+  "video/quicktime", // MOV files
+];
 const validNoteImportFileTypes = ["application/zip", "text/markdown"];
 
 const ImportFileModal_MapImageRequestUploadMutation = graphql`
@@ -85,6 +108,15 @@ const ImageImportModal: React.FC<{
   const [objectUrl, setObjectUrl] = React.useState<string | null>(null);
   const accessToken = useAccessToken();
 
+  // Auto-detect media type from extension
+  const detectedMediaType = React.useMemo(() => {
+    const ext = file.name.split(".").pop() ?? "";
+    return getMediaTypeFromExtension(ext) || ("image" as MediaType);
+  }, [file.name]);
+
+  const [mediaType, setMediaType] =
+    React.useState<MediaType>(detectedMediaType);
+
   const [mapImageRequestUpload] =
     useMutation<importFileModal_MapImageRequestUploadMutation>(
       ImportFileModal_MapImageRequestUploadMutation
@@ -108,8 +140,25 @@ const ImageImportModal: React.FC<{
     [file]
   );
 
+  // Max file sizes: 50MB for videos, 10MB for GIFs, 5MB for images
+  const maxFileSize = React.useMemo(() => {
+    if (mediaType === "video") return 50 * 1024 * 1024; // 50MB
+    if (mediaType === "gif") return 10 * 1024 * 1024; // 10MB
+    return 5 * 1024 * 1024; // 5MB for images
+  }, [mediaType]);
+
   const [isCreatingMap, onClickCreateMap] = useAsyncTask(
     React.useCallback(async () => {
+      // Validate file size
+      if (file.size > maxFileSize) {
+        const sizeInMB = (maxFileSize / (1024 * 1024)).toFixed(0);
+        throw new Error(
+          `File size (${(file.size / (1024 * 1024)).toFixed(
+            1
+          )}MB) exceeds maximum allowed size of ${sizeInMB}MB for ${mediaType} format.`
+        );
+      }
+
       const hash = await generateSHA256FileHash(file);
       // 1. request file upload
       const result = await mapImageRequestUpload({
@@ -117,6 +166,7 @@ const ImageImportModal: React.FC<{
           input: {
             sha256: hash,
             extension: file.name.split(".").pop() ?? "",
+            mediaType: mediaType,
           },
         },
       });
@@ -181,11 +231,24 @@ const ImageImportModal: React.FC<{
     <Modal onPressEscape={close} onClickOutside={close}>
       <Modal.Dialog>
         <Modal.Header>
-          <h3>Import Image</h3>
+          <h3>Import Image or Video</h3>
         </Modal.Header>
         <Modal.Body>
           {objectUrl ? <PreviewImage src={objectUrl} /> : null}
           <FileTitle>{fileTitleWithoutExtension}</FileTitle>
+          <MediaTypeSelector>
+            <label>
+              <strong>Media Type:</strong>
+              <select
+                value={mediaType}
+                onChange={(e) => setMediaType(e.target.value as MediaType)}
+              >
+                <option value="image">Image (PNG, JPG, WebP)</option>
+                <option value="gif">Animated GIF</option>
+                <option value="video">Video (MP4, WebM, OGG)</option>
+              </select>
+            </label>
+          </MediaTypeSelector>
         </Modal.Body>
         <Modal.Footer>
           <Modal.Actions>
@@ -493,9 +556,9 @@ export const ImportFileModal: React.FC<{
   file: File;
   close: () => void;
 }> = ({ file, close }) => {
-  if (validImageFileTypes.includes(file.type)) {
+  if (validMapMediaFileTypes.includes(file.type)) {
     return <ImageImportModal file={file} close={close} />;
-  } else if (validNoteImportFileTypes) {
+  } else if (validNoteImportFileTypes.includes(file.type)) {
     return <NoteImportModal file={file} close={close} />;
   } else {
     return (
@@ -505,8 +568,8 @@ export const ImportFileModal: React.FC<{
             <h3>Invalid File</h3>
           </Modal.Header>
           <Modal.Body>
-            Only images, zip files and markdown files can imported into Dungeon
-            Revealer.
+            Only images, GIFs, videos, zip files and markdown files can be
+            imported into Dungeon Revealer.
           </Modal.Body>
           <Modal.Footer>
             <Modal.Actions>
