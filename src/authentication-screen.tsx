@@ -47,26 +47,28 @@ export const AuthenticationScreen: React.FC<{
           if (result.data.role === requiredRole || result.data.role === "DM") {
             onAuthenticate(password);
           } else {
-            setError("Invalid Password!");
+            setError("Mot de passe invalide !");
           }
         }}
       >
         <Input
           background="white"
-          placeholder={`${requiredRole === "DM" ? "DM" : "Player"} Password`}
+          placeholder={`Mot de passe ${
+            requiredRole === "DM" ? "MJ" : "joueur"
+          }`}
           value={password}
           onChange={(ev) => setPassword(ev.target.value)}
         />
         <ButtonContainer>
           <ButtonColumn>
-            <Button.Primary type="submit">Log In</Button.Primary>
+            <Button.Primary type="submit">Connexion</Button.Primary>
           </ButtonColumn>
         </ButtonContainer>
         <div>
           {requiredRole === "DM" ? (
-            <Link href="/">Visit Player Section{" >"}</Link>
+            <Link href="/">Section joueurs{" >"}</Link>
           ) : (
-            <Link href="/dm">Visit DM Section{" >"}</Link>
+            <Link href="/dm">Section MJ{" >"}</Link>
           )}
         </div>
       </form>
@@ -75,10 +77,10 @@ export const AuthenticationScreen: React.FC<{
         <Modal onPressEscape={() => undefined}>
           <Modal.Dialog size={ModalDialogSize.SMALL}>
             <Modal.Header>
-              <h3>Invalid Password</h3>
+              <h3>Mot de passe invalide</h3>
             </Modal.Header>
             <Modal.Body>
-              The password you entered is invalid. Please try again.{" "}
+              Le mot de passe saisi est incorrect. Veuillez réessayer.{" "}
               <ButtonContainer>
                 <ButtonColumn
                   onClick={() => {
@@ -86,7 +88,7 @@ export const AuthenticationScreen: React.FC<{
                     setPassword("");
                   }}
                 >
-                  <Button.Primary>Try again.</Button.Primary>
+                  <Button.Primary>Réessayer.</Button.Primary>
                 </ButtonColumn>
               </ButtonContainer>
             </Modal.Body>

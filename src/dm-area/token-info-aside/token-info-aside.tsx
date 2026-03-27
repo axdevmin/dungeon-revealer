@@ -313,10 +313,10 @@ const WindowRenderer = (props: {
           {
             onClick: () => {
               showConfirmationDialog({
-                header: "Delete Note",
-                body: "Do you really want to delete this note?",
-                cancelButtonText: "Abort",
-                confirmButtonText: "Delete",
+                header: "Supprimer la note",
+                body: "Voulez-vous vraiment supprimer cette note ?",
+                cancelButtonText: "Annuler",
+                confirmButtonText: "Supprimer",
                 onConfirm: () => {
                   const noteId = node.id;
 
@@ -332,7 +332,7 @@ const WindowRenderer = (props: {
                 },
               });
             },
-            title: "Delete note",
+            title: "Supprimer la note",
             icon: <Icon.Trash boxSize="16px" />,
             isDisabled: props.noteId === null || !data.data,
           },
@@ -469,9 +469,9 @@ const WindowRenderer = (props: {
               node.title
             )
           ) : isLoading ? (
-            "Loading..."
+            "Chargement..."
           ) : isSkipped ? null : (
-            "NOT FOUND"
+            "Introuvable"
           )
         }
         bodyContent={
@@ -501,13 +501,13 @@ const WindowRenderer = (props: {
               }}
             >
               {isLoading ? (
-                "Loading..."
+                "Chargement..."
               ) : isSkipped ? (
                 <>
                   <VStack>
                     {viewerRole === "DM" ? (
                       <>
-                        <Text>Open or create a new note</Text>
+                        <Text>Ouvrir ou créer une nouvelle note</Text>
                         <Box>
                           <Button.Primary
                             small
@@ -516,17 +516,17 @@ const WindowRenderer = (props: {
                             }}
                           >
                             <Icon.FilePlus boxSize="16px" />
-                            <span>Create new note</span>
+                            <span>Créer une note</span>
                           </Button.Primary>
                         </Box>
                       </>
                     ) : (
-                      <Text>Open a note!</Text>
+                      <Text>Ouvrir une note !</Text>
                     )}
                   </VStack>
                 </>
               ) : (
-                "This note does no longer exist."
+                "Cette note n'existe plus."
               )}
             </div>
           )

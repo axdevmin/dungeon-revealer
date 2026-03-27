@@ -199,7 +199,7 @@ const Logo: React.FC<{
   const { horizontal } = React.useContext(ToolbarContext);
   return (
     <ToolbarLogo horizontal={horizontal} {...props}>
-      <span>DR</span>
+      <span>N</span>
     </ToolbarLogo>
   );
 };

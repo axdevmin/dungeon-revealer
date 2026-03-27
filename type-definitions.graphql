@@ -410,6 +410,11 @@ type Mutation {
   mapCreate(input: MapCreateInput!): MapCreateResult!
 
   """
+  Create a new map from a video URL (e.g. YouTube).
+  """
+  mapCreateFromUrl(input: MapCreateFromUrlInput!): MapCreateResult!
+
+  """
   Delete a map.
   """
   mapDelete(input: MapDeleteInput!): Boolean!
@@ -702,6 +707,11 @@ input MapCreateInput {
   """
   mapImageUploadId: ID!
   title: String!
+}
+
+input MapCreateFromUrlInput {
+  title: String!
+  videoUrl: String!
 }
 
 input MapDeleteInput {

@@ -87,11 +87,13 @@ const Plane = React.forwardRef(
       children,
       position,
       scale,
+      transparentBackground,
       ...props
     }: {
       position: SpringValue<[number, number, number]>;
       scale: SpringValue<[number, number, number]>;
       children: React.ReactNode;
+      transparentBackground?: boolean;
     },
     ref: React.ForwardedRef<THREE.Mesh>
   ) => {
@@ -128,7 +130,16 @@ const Plane = React.forwardRef(
       >
         <mesh ref={ref} {...props}>
           <planeBufferGeometry attach="geometry" args={[10000, 10000]} />
-          <meshBasicMaterial attach="material" color="black" />
+          {transparentBackground ? (
+            <meshBasicMaterial
+              attach="material"
+              transparent={true}
+              opacity={0}
+              depthWrite={false}
+            />
+          ) : (
+            <meshBasicMaterial attach="material" color="black" />
+          )}
         </mesh>
         {children}
       </animated.group>
@@ -1238,6 +1249,108 @@ const MapRendererFragment = graphql`
   }
 `;
 
+const fogVertexShader = `
+varying vec2 vUv;
+void main() {
+  vUv = uv;
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}
+`;
+
+const fogFragmentShader = `
+uniform sampler2D uFogTexture;
+uniform float uTime;
+uniform float uOpacity;
+varying vec2 vUv;
+
+vec2 hash2(vec2 p) {
+  p = vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3)));
+  return -1.0 + 2.0 * fract(sin(p) * 43758.5453123);
+}
+
+float noise(vec2 p) {
+  vec2 i = floor(p);
+  vec2 f = fract(p);
+  vec2 u = f * f * (3.0 - 2.0 * f);
+  return mix(
+    mix(dot(hash2(i + vec2(0.0, 0.0)), f - vec2(0.0, 0.0)),
+        dot(hash2(i + vec2(1.0, 0.0)), f - vec2(1.0, 0.0)), u.x),
+    mix(dot(hash2(i + vec2(0.0, 1.0)), f - vec2(0.0, 1.0)),
+        dot(hash2(i + vec2(1.0, 1.0)), f - vec2(1.0, 1.0)), u.x),
+    u.y
+  );
+}
+
+float fbm(vec2 p) {
+  float value = 0.0;
+  float amplitude = 0.5;
+  float frequency = 1.0;
+  for (int i = 0; i < 5; i++) {
+    value += amplitude * noise(p * frequency);
+    frequency *= 2.0;
+    amplitude *= 0.5;
+  }
+  return value;
+}
+
+void main() {
+  vec4 fogSample = texture2D(uFogTexture, vUv);
+  float fogMask = fogSample.a;
+  if (fogMask < 0.05) discard;
+
+  vec2 p = vUv * 3.0;
+  float t = uTime * 0.08;
+
+  float n1 = fbm(p + vec2(t, t * 0.7));
+  float n2 = fbm(p + vec2(n1 * 1.5, n1 * 1.5) + vec2(t * 0.4, -t * 0.25));
+  float smoke = fbm(p + vec2(n2 * 1.2));
+  smoke = smoke * 0.5 + 0.5;
+
+  float grey = mix(0.2, 0.72, smoke);
+  gl_FragColor = vec4(grey, grey, grey, fogMask * uOpacity);
+}
+`;
+
+const FogAnimatedRenderer = (props: {
+  width: number;
+  height: number;
+  fogOpacity: number;
+  fogTexture: THREE.Texture;
+}) => {
+  const [material] = React.useState(
+    () =>
+      new THREE.ShaderMaterial({
+        uniforms: {
+          uFogTexture: { value: props.fogTexture },
+          uTime: { value: 0 },
+          uOpacity: { value: props.fogOpacity },
+        },
+        vertexShader: fogVertexShader,
+        fragmentShader: fogFragmentShader,
+        transparent: true,
+      })
+  );
+
+  React.useEffect(() => {
+    material.uniforms.uFogTexture.value = props.fogTexture;
+  }, [material, props.fogTexture]);
+
+  useFrame(({ clock }) => {
+    material.uniforms.uTime.value = clock.getElapsedTime();
+    material.uniforms.uOpacity.value = props.fogOpacity;
+  });
+
+  return (
+    <mesh>
+      <planeBufferGeometry
+        attach="geometry"
+        args={[props.width, props.height]}
+      />
+      <primitive object={material} attach="material" />
+    </mesh>
+  );
+};
+
 const FogRenderer = React.memo(
   (props: {
     width: number;
@@ -1245,6 +1358,12 @@ const FogRenderer = React.memo(
     fogOpacity: number;
     fogTexture: THREE.Texture;
   }) => {
+    const isDungeonMaster = React.useContext(IsDungeonMasterContext);
+
+    if (!isDungeonMaster) {
+      return <FogAnimatedRenderer {...props} />;
+    }
+
     return (
       <mesh>
         <planeBufferGeometry
@@ -1274,6 +1393,7 @@ const MapRenderer = (props: {
   dimensions: Dimensions;
   fogOpacity: number;
   markerRadius: number;
+  hideMapMesh?: boolean;
 }) => {
   const map = useFragment(MapRendererFragment, props.map);
   const isDungeonMaster = React.useContext(IsDungeonMasterContext);
@@ -1281,13 +1401,15 @@ const MapRenderer = (props: {
   return (
     <>
       <group renderOrder={LayerRenderOrder.map}>
-        <mesh>
-          <planeBufferGeometry
-            attach="geometry"
-            args={[props.dimensions.width, props.dimensions.height]}
-          />
-          <meshStandardMaterial attach="material" map={props.mapTexture} />
-        </mesh>
+        {!props.hideMapMesh && (
+          <mesh>
+            <planeBufferGeometry
+              attach="geometry"
+              args={[props.dimensions.width, props.dimensions.height]}
+            />
+            <meshStandardMaterial attach="material" map={props.mapTexture} />
+          </mesh>
+        )}
         {map.grid &&
         (isDungeonMaster ? map.showGrid : map.showGridToPlayers) ? (
           <GridRenderer
@@ -1709,6 +1831,7 @@ const MapViewRenderer = (props: {
       <Plane
         position={spring.position}
         scale={spring.scale}
+        transparentBackground={map.mediaType === "video_url"}
         {...bind()}
         ref={planeRef}
       >
@@ -1726,6 +1849,7 @@ const MapViewRenderer = (props: {
             dimensions.width / mediaNaturalWidth / optimalDimensions.ratio
           }
           fogOpacity={props.fogOpacity}
+          hideMapMesh={map.mediaType === "video_url"}
         />
         {props.activeTool ? (
           <MapToolRenderer
@@ -1745,6 +1869,40 @@ const MapCanvasContainer = styled.div`
   height: 100%;
   touch-action: manipulation;
 `;
+
+const YouTubeIframe = styled.iframe`
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+  pointer-events: none;
+`;
+
+const YouTubeOverlayCanvas = styled.div`
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+`;
+
+const toYouTubeEmbedUrl = (url: string): string | null => {
+  try {
+    const u = new URL(url);
+    let videoId: string | null = null;
+    if (u.hostname.includes("youtube.com")) {
+      videoId = u.searchParams.get("v");
+    } else if (u.hostname === "youtu.be") {
+      videoId = u.pathname.slice(1);
+    }
+    if (!videoId) return null;
+    return `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=0&modestbranding=1`;
+  } catch {
+    return null;
+  }
+};
 
 const AnimationToggleButton = styled.button`
   position: absolute;
@@ -1832,6 +1990,10 @@ export const MapView = (props: {
       };
     }
 
+    if (map.mediaType === "video_url") {
+      return; // YouTube URL maps need no media loading
+    }
+
     const mapImageTask = loadImage(map.mapImageUrl);
 
     cleanupMapImage.current = () => {
@@ -1853,8 +2015,10 @@ export const MapView = (props: {
   React.useEffect(() => {
     if (map.mediaType !== "gif" || !mapImage || !isAnimating) return;
     const img = mapImage;
+    // Must be in viewport and non-zero opacity — Chrome stops animating GIFs
+    // that are off-screen (>1 viewport) or have opacity:0.
     img.style.cssText =
-      "position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;opacity:0;pointer-events:none;";
+      "position:fixed;top:0;left:0;width:1px;height:1px;opacity:0.001;pointer-events:none;z-index:-9999;";
     document.body.appendChild(img);
     return () => {
       if (img.parentNode) img.parentNode.removeChild(img);
@@ -1908,59 +2072,100 @@ export const MapView = (props: {
   }, [map.fogLiveImageUrl, map.fogProgressImageUrl, isDungeonMaster]);
 
   const isAnimatedMedia = map.mediaType === "gif" || map.mediaType === "video";
+  const isYouTubeMap = map.mediaType === "video_url";
+  const youtubeEmbedUrl = isYouTubeMap
+    ? toYouTubeEmbedUrl(map.mapImageUrl)
+    : null;
+
+  const canvasContent = (
+    <Canvas
+      camera={{ position: [0, 0, 5] }}
+      pixelRatio={window.devicePixelRatio}
+      gl={isYouTubeMap ? { alpha: true } : undefined}
+      style={isYouTubeMap ? { background: "transparent" } : undefined}
+      onCreated={
+        isYouTubeMap ? ({ gl }) => gl.setClearColor(0x000000, 0) : undefined
+      }
+      raycaster={{
+        filter: (intersects, state) => {
+          let sorted: THREE.Intersection[] = [];
+          if (intersects.length > 0) {
+            const closest = intersects[0];
+            const outOfRange: THREE.Intersection[] = [];
+            const inRange: THREE.Intersection[] = [];
+            const ordered = intersects.sort(
+              (i1, i2) => i2.object.renderOrder - i1.object.renderOrder
+            );
+            for (const intersect of ordered) {
+              if (
+                Math.abs(closest.distance - intersect.distance) <=
+                (state.raycaster.params.Line?.threshold ?? 1)
+              ) {
+                inRange.push(intersect);
+              } else {
+                outOfRange.push(intersect);
+              }
+            }
+            sorted = inRange.concat(outOfRange);
+          }
+          return sorted;
+        },
+      }}
+    >
+      <ambientLight intensity={1} />
+      <ContextBridge>
+        <MapViewRenderer
+          key={map.id}
+          map={map}
+          activeTool={props.activeTool}
+          mapImage={mapImage}
+          mapVideo={mapVideo}
+          isAnimating={isAnimating}
+          fogImage={fogImage}
+          controlRef={props.controlRef}
+          fogOpacity={props.fogOpacity}
+        />
+      </ContextBridge>
+    </Canvas>
+  );
+
+  if (isYouTubeMap) {
+    if (!youtubeEmbedUrl) {
+      return (
+        <MapCanvasContainer>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              height: "100%",
+              color: "white",
+              fontSize: 18,
+            }}
+          >
+            URL YouTube invalide
+          </div>
+        </MapCanvasContainer>
+      );
+    }
+    return (
+      <MapCanvasContainer>
+        <YouTubeIframe
+          src={youtubeEmbedUrl}
+          allow="autoplay; encrypted-media; gyroscope; accelerometer"
+          allowFullScreen={false}
+        />
+      </MapCanvasContainer>
+    );
+  }
 
   return mapImage || mapVideo ? (
     <MapCanvasContainer>
-      <Canvas
-        camera={{ position: [0, 0, 5] }}
-        pixelRatio={window.devicePixelRatio}
-        raycaster={{
-          filter: (intersects, state) => {
-            let sorted: THREE.Intersection[] = [];
-            if (intersects.length > 0) {
-              const closest = intersects[0];
-              const outOfRange: THREE.Intersection[] = [];
-              const inRange: THREE.Intersection[] = [];
-              const ordered = intersects.sort(
-                (i1, i2) => i2.object.renderOrder - i1.object.renderOrder
-              );
-              for (const intersect of ordered) {
-                if (
-                  Math.abs(closest.distance - intersect.distance) <=
-                  (state.raycaster.params.Line?.threshold ?? 1)
-                ) {
-                  // The distance to the closest intersect is in range
-                  inRange.push(intersect);
-                } else {
-                  // The distance to the closest intersect is out of range
-                  outOfRange.push(intersect);
-                }
-              }
-              sorted = inRange.concat(outOfRange);
-            }
-            return sorted;
-          },
-        }}
-      >
-        <ambientLight intensity={1} />
-        <ContextBridge>
-          <MapViewRenderer
-            key={map.id}
-            map={map}
-            activeTool={props.activeTool}
-            mapImage={mapImage}
-            mapVideo={mapVideo}
-            isAnimating={isAnimating}
-            fogImage={fogImage}
-            controlRef={props.controlRef}
-            fogOpacity={props.fogOpacity}
-          />
-        </ContextBridge>
-      </Canvas>
+      {canvasContent}
       {isAnimatedMedia && (
         <AnimationToggleButton
           onClick={() => setIsAnimating((v) => !v)}
-          title={isAnimating ? "Pause animation" : "Play animation"}
+          title={isAnimating ? "Mettre en pause" : "Lancer l'animation"}
         >
           {isAnimating ? (
             <Icon.Pause boxSize="20px" />

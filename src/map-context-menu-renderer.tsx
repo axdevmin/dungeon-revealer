@@ -134,7 +134,7 @@ export const ContextMenuRenderer = (props: {
         });
       }}
     >
-      Paste Token
+      Coller le token
       {copyContent.size <= 1 ? "" : `s (${copyContent.size})`}
     </MenuItem>
   );
@@ -159,7 +159,7 @@ export const ContextMenuRenderer = (props: {
                 }}
                 isDisabled={selectedItems.size == 0}
               >
-                Copy tokens ({selectedItems.size})
+                Copier les tokens ({selectedItems.size})
               </MenuItem>
               <MenuItem
                 onClick={() => {
@@ -175,7 +175,7 @@ export const ContextMenuRenderer = (props: {
                 }}
                 isDisabled={selectedItems.size == 0}
               >
-                Delete tokens ({selectedItems.size})
+                Supprimer les tokens ({selectedItems.size})
               </MenuItem>
             </>
           ) : state.target?.type === "token" ? (
@@ -188,7 +188,7 @@ export const ContextMenuRenderer = (props: {
                   }
                 }}
               >
-                Copy Token
+                Copier le token
               </MenuItem>
 
               <MenuItem
@@ -205,7 +205,7 @@ export const ContextMenuRenderer = (props: {
                   }
                 }}
               >
-                Delete
+                Supprimer
               </MenuItem>
             </>
           ) : (

@@ -309,7 +309,7 @@ export const TokenImageCropper = (props: {
               alignSelf="flex-end"
             >
               <Button onClick={props.onClose} variant="ghost">
-                Abort
+                Annuler
               </Button>
               <Button
                 colorScheme="teal"
@@ -326,7 +326,7 @@ export const TokenImageCropper = (props: {
                   props.onConfirm({ type: "File", file, title });
                 }}
               >
-                Confirm
+                Confirmer
               </Button>
             </Stack>
           </Stack>

@@ -244,6 +244,41 @@ export class Maps {
     });
   }
 
+  async createMapFromUrl({
+    title,
+    videoUrl,
+  }: {
+    title: string;
+    videoUrl: string;
+  }) {
+    const id = randomUUID();
+    return this._processTask<MapEntity>(`map:${id}`, async () => {
+      await fs.mkdirp(this._buildMapFolderPath(id));
+      const map: MapEntity = {
+        id,
+        title,
+        fogProgressPath: null,
+        fogLivePath: null,
+        mapPath: videoUrl,
+        grid: null,
+        showGrid: false,
+        showGridToPlayers: false,
+        tokens: [],
+        fogProgressRevision: randomUUID(),
+        fogLiveRevision: randomUUID(),
+        mediaType: "video-url",
+      };
+
+      await fs.writeFile(
+        path.join(this._mapsDirectoryPath, id, "settings.json"),
+        JSON.stringify(map, undefined, 2)
+      );
+
+      this._maps.push(map);
+      return map;
+    });
+  }
+
   async _updateMapSettings(map: MapEntity, data: Partial<MapEntity>) {
     Object.assign(map, data);
 

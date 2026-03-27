@@ -111,7 +111,7 @@ const BrushSettings = (): React.ReactElement => {
     () => ({
       brushSize: {
         type: LevaInputs.NUMBER,
-        label: "Brush Size",
+        label: "Taille du pinceau",
         value: state.brushSize.get(),
         onChange: (value, _, { initial }) => {
           if (initial) {
@@ -124,18 +124,18 @@ const BrushSettings = (): React.ReactElement => {
         step: 1,
       },
       brushShape: levaPluginIconPicker({
-        label: "Brush Shape",
+        label: "Forme du pinceau",
         value: state.brushShape,
         options: [
           {
             value: BrushShape.square,
             icon: <Icon.Square boxSize="20px" />,
-            label: "Square",
+            label: "Carré",
           },
           {
             value: BrushShape.circle,
             icon: <Icon.Circle boxSize="20px" />,
-            label: "Circle",
+            label: "Cercle",
           },
         ],
         onChange: (brushShape, _, { initial }) => {
@@ -178,7 +178,7 @@ const AreaSelectSettings = (): React.ReactElement => {
     () => ({
       snapToGrid: {
         type: LevaInputs.BOOLEAN,
-        label: "Snap to Grid",
+        label: "Aligner sur la grille",
         value: state.snapToGrid,
         onChange: (value) =>
           setState((state) => ({ ...state, snapToGrid: value })),
@@ -216,7 +216,7 @@ const ShroudRevealSettings = (): React.ReactElement => {
           }
         >
           <Icon.Eye boxSize="20px" />
-          <Icon.Label>Reveal</Icon.Label>
+          <Icon.Label>Révéler</Icon.Label>
         </Toolbar.Button>
       </Toolbar.Item>
       <Toolbar.Item isActive={state.fogMode === FogMode.shroud}>
@@ -226,7 +226,7 @@ const ShroudRevealSettings = (): React.ReactElement => {
           }
         >
           <Icon.EyeOff boxSize="20px" />
-          <Icon.Label>Shroud</Icon.Label>
+          <Icon.Label>Masquer</Icon.Label>
         </Toolbar.Button>
       </Toolbar.Item>
     </>
@@ -299,12 +299,12 @@ const ShowGridSettingsPopup = React.memo(
         <VStack minWidth="300px" padding="3">
           <HStack width="100%" justifyContent="space-between">
             <Box>
-              <Heading size="xs">Grid Settings</Heading>
+              <Heading size="xs">Paramètres de grille</Heading>
             </Box>
 
             <Box>
               <Button.Tertiary small onClick={props.enterConfigureGridMode}>
-                <span>Edit Grid </span>
+                <span>Modifier </span>
                 <Icon.Settings boxSize="12px" />
               </Button.Tertiary>
             </Box>
@@ -315,7 +315,7 @@ const ShowGridSettingsPopup = React.memo(
             alignItems="center"
             justifyContent="space-between"
           >
-            <FormLabel htmlFor="show-grid-toggle">Show Grid</FormLabel>
+            <FormLabel htmlFor="show-grid-toggle">Afficher la grille</FormLabel>
             <Switch
               id="show-grid-toggle"
               size="lg"
@@ -332,7 +332,7 @@ const ShowGridSettingsPopup = React.memo(
             justifyContent="space-between"
           >
             <FormLabel htmlFor="show-grid-to-players-toggle">
-              Show Grid to players
+              Afficher aux joueurs
             </FormLabel>
             <Switch
               id="show-grid-to-players-toggle"
@@ -345,7 +345,7 @@ const ShowGridSettingsPopup = React.memo(
             />
           </FormControl>
           <FormControl>
-            <FormLabel>Color</FormLabel>
+            <FormLabel>Couleur</FormLabel>
             <ColorPickerInput
               color={gridColor}
               onChange={(color) => {
@@ -388,10 +388,10 @@ const GridSettingButton = (props: {
         onClick={() => {
           if (!map.grid) {
             showDialog({
-              header: "Configure Grid",
-              body: "This map currently has no grid data. Do you wanna add a new grid using the grid configurator?",
+              header: "Configurer la grille",
+              body: "Cette carte n'a pas encore de grille. Voulez-vous en ajouter une avec le configurateur ?",
               onConfirm: props.enterConfigureGridMode,
-              confirmButtonText: "Add Grid",
+              confirmButtonText: "Ajouter",
             });
           } else {
             setShowMenu((showMenu) => !showMenu);
@@ -399,7 +399,7 @@ const GridSettingButton = (props: {
         }}
       >
         <Icon.Grid boxSize="20px" />
-        <Icon.Label>Grid</Icon.Label>
+        <Icon.Label>Grille</Icon.Label>
       </Toolbar.Button>
       {showMenu && map.grid ? (
         <ShowGridSettingsPopup
@@ -424,7 +424,7 @@ const TokenMarkerSettings = (): React.ReactElement => {
     () => ({
       radius: {
         type: LevaInputs.NUMBER,
-        label: "Size",
+        label: "Taille",
         value: tokenMarkerContext.state.tokenRadius.get(),
         step: 1,
         onChange: (value) => {
@@ -443,7 +443,7 @@ const TokenMarkerSettings = (): React.ReactElement => {
       }),
       color: {
         type: LevaInputs.COLOR,
-        label: "Color",
+        label: "Couleur",
         value: tokenMarkerContext.state.tokenColor ?? "rgb(255, 255, 255)",
         onChange: (color: string) => {
           tokenMarkerContext.setState((state) => ({
@@ -454,7 +454,7 @@ const TokenMarkerSettings = (): React.ReactElement => {
       },
       label: {
         type: LevaInputs.STRING,
-        label: "Label",
+        label: "Étiquette",
         value: tokenMarkerContext.state.tokenText,
         optional: true,
         disabled: !tokenMarkerContext.state.includeTokenText,
@@ -472,7 +472,7 @@ const TokenMarkerSettings = (): React.ReactElement => {
       },
       counter: {
         type: LevaInputs.NUMBER,
-        label: "Counter",
+        label: "Compteur",
         step: 1,
         min: 0,
         value: tokenMarkerContext.state.tokenCounter,
@@ -525,31 +525,31 @@ const TokenMarkerSettings = (): React.ReactElement => {
 
 const dmTools: Array<ToolMapRecord> = [
   {
-    name: "Move",
+    name: "Déplacer",
     icon: <Icon.Move boxSize="20px" />,
     tool: DragPanZoomMapTool,
     MenuComponent: null,
   },
   {
-    name: "Brush",
+    name: "Pinceau",
     icon: <Icon.Pen boxSize="20px" />,
     tool: BrushMapTool,
     MenuComponent: BrushSettings,
   },
   {
-    name: "Area",
+    name: "Zone",
     icon: <Icon.Crop boxSize="20px" />,
     tool: AreaSelectMapTool,
     MenuComponent: AreaSelectSettings,
   },
   {
-    name: "Mark",
+    name: "Marquer",
     icon: <Icon.Crosshair boxSize="20px" />,
     tool: MarkAreaMapTool,
     MenuComponent: null,
   },
   {
-    name: "Token",
+    name: "Jeton",
     icon: <Icon.Target boxSize="20px" />,
     tool: TokenMarkerMapTool,
     MenuComponent: TokenMarkerSettings,
@@ -593,6 +593,7 @@ const MapPingMutation = graphql`
 const DMMapFragment = graphql`
   fragment dmMap_DMMapFragment on Map {
     id
+    mediaType
     grid {
       offsetX
       offsetY
@@ -621,6 +622,7 @@ export const DmMap = (props: {
     changes: Omit<Partial<MapTokenEntity>, "id">
   ) => void;
   controlRef: React.MutableRefObject<MapControlInterface | null>;
+  onLogout: () => void;
 }): React.ReactElement => {
   const map = useFragment(DMMapFragment, props.map);
   const [mapPing] = useMutation<dmMap_MapPingMutation>(MapPingMutation);
@@ -706,11 +708,16 @@ export const DmMap = (props: {
             window.navigator.platform.match("Mac") ? ev.metaKey : ev.ctrlKey
           ) {
             ev.preventDefault();
-            const context = controlRef.current?.getContext();
-            if (!context) {
-              return;
+            if (map.mediaType === "video_url") {
+              const emptyCanvas = document.createElement("canvas");
+              emptyCanvas.width = 1;
+              emptyCanvas.height = 1;
+              props.sendLiveMap(emptyCanvas);
+            } else {
+              const context = controlRef.current?.getContext();
+              if (!context) return;
+              props.sendLiveMap(context.fogCanvas);
             }
-            props.sendLiveMap(context.fogCanvas);
           }
           break;
         }
@@ -853,8 +860,8 @@ export const DmMap = (props: {
                   <Toolbar.Button
                     onClick={() =>
                       showDialog({
-                        header: "Shroud All",
-                        body: "Do you really want to shroud the whole map?",
+                        header: "Tout masquer",
+                        body: "Voulez-vous vraiment masquer toute la carte ?",
                         onConfirm: () => {
                           // TODO: this should be less verbose
                           const context = controlRef.current?.getContext();
@@ -876,15 +883,15 @@ export const DmMap = (props: {
                     }
                   >
                     <Icon.Droplet fill="currentColor" boxSize="20px" />
-                    <Icon.Label>Shroud All</Icon.Label>
+                    <Icon.Label>Tout masquer</Icon.Label>
                   </Toolbar.Button>
                 </Toolbar.Item>
                 <Toolbar.Item isActive>
                   <Toolbar.Button
                     onClick={() =>
                       showDialog({
-                        header: "Clear All",
-                        body: "Do you really want to clear the whole map?",
+                        header: "Tout révéler",
+                        body: "Voulez-vous vraiment révéler toute la carte ?",
                         onConfirm: () => {
                           // TODO: this should be less verbose
                           const context = controlRef.current?.getContext();
@@ -906,7 +913,7 @@ export const DmMap = (props: {
                     }
                   >
                     <Icon.Droplet boxSize="20px" />
-                    <Icon.Label>Clear All</Icon.Label>
+                    <Icon.Label>Tout révéler</Icon.Label>
                   </Toolbar.Button>
                 </Toolbar.Item>
               </Toolbar.Group>
@@ -928,7 +935,7 @@ export const DmMap = (props: {
                     }}
                   >
                     <Icon.Map boxSize="20px" />
-                    <Icon.Label>Map Library</Icon.Label>
+                    <Icon.Label>Bibliothèque</Icon.Label>
                   </Toolbar.Button>
                 </Toolbar.Item>
                 <Toolbar.Item isActive>
@@ -938,7 +945,7 @@ export const DmMap = (props: {
                     }}
                   >
                     <Icon.Image boxSize="20px" />
-                    <Icon.Label>Media Library</Icon.Label>
+                    <Icon.Label>Médias</Icon.Label>
                   </Toolbar.Button>
                 </Toolbar.Item>
                 <Toolbar.Item isActive>
@@ -956,6 +963,12 @@ export const DmMap = (props: {
             <MarginLeftDiv />
             <Toolbar horizontal>
               <Toolbar.Group>
+                <Toolbar.Item isActive>
+                  <Toolbar.Button onClick={props.onLogout}>
+                    <Icon.LogOut boxSize="20px" />
+                    <Icon.Label>Déconnexion</Icon.Label>
+                  </Toolbar.Button>
+                </Toolbar.Item>
                 <Toolbar.Item>
                   <ConditionalWrap
                     condition={props.liveMapId !== null}
@@ -980,37 +993,49 @@ export const DmMap = (props: {
                           : "hsl(211, 27%, 70%)"
                       }
                     >
-                      Stop Sharing
+                      Arrêter
                     </Icon.Label>
                   </ConditionalWrap>
                 </Toolbar.Item>
                 {isCurrentMapLive ? (
                   <Toolbar.Item>
                     <Icon.Radio stroke="hsl(160, 51%, 49%)" boxSize="20px" />
-                    <Icon.Label color="hsl(160, 51%, 49%)">Live</Icon.Label>
+                    <Icon.Label color="hsl(160, 51%, 49%)">
+                      En direct
+                    </Icon.Label>
                   </Toolbar.Item>
                 ) : isOtherMapLive ? (
                   <Toolbar.Item>
                     <Icon.Radio stroke="hsl(48, 94%, 68%)" boxSize="20px" />
-                    <Icon.Label color="hsl(48, 94%, 68%)">Live</Icon.Label>
+                    <Icon.Label color="hsl(48, 94%, 68%)">En direct</Icon.Label>
                   </Toolbar.Item>
                 ) : (
                   <Toolbar.Item>
                     <Icon.Radio stroke="hsl(211, 27%, 70%)" boxSize="20px" />
-                    <Icon.Label color="hsl(211, 27%, 70%)">Not Live</Icon.Label>
+                    <Icon.Label color="hsl(211, 27%, 70%)">
+                      Hors ligne
+                    </Icon.Label>
                   </Toolbar.Item>
                 )}
                 {asyncClipBoardApi ? (
                   <Toolbar.Item isActive>
                     <Toolbar.Button onClick={copyMapToClipboard}>
                       <Icon.Clipboard boxSize="20px" />
-                      <Icon.Label>Clipboard</Icon.Label>
+                      <Icon.Label>Presse-papier</Icon.Label>
                     </Toolbar.Button>
                   </Toolbar.Item>
                 ) : null}
                 <Toolbar.Item isActive>
                   <Toolbar.Button
                     onClick={() => {
+                      if (map.mediaType === "video_url") {
+                        // YouTube maps: send an empty fog canvas
+                        const emptyCanvas = document.createElement("canvas");
+                        emptyCanvas.width = 1;
+                        emptyCanvas.height = 1;
+                        props.sendLiveMap(emptyCanvas);
+                        return;
+                      }
                       const context = controlRef.current?.getContext();
                       if (!context) {
                         return;
@@ -1019,7 +1044,7 @@ export const DmMap = (props: {
                     }}
                   >
                     <Icon.Send boxSize="20px" />
-                    <Icon.Label>Send</Icon.Label>
+                    <Icon.Label>Envoyer</Icon.Label>
                   </Toolbar.Button>
                 </Toolbar.Item>
               </Toolbar.Group>
@@ -1254,7 +1279,7 @@ const GridConfigurator = (props: {
             onClick={props.onAbort}
             danger
           >
-            <Icon.X boxSize="20px" /> <span>Abort</span>
+            <Icon.X boxSize="20px" /> <span>Annuler</span>
           </Button.Tertiary>
         </div>
         <div>
@@ -1281,7 +1306,7 @@ const GridConfigurator = (props: {
               });
             }}
           >
-            <span>Confirm</span> <Icon.ChevronRight boxSize="20px" />
+            <span>Confirmer</span> <Icon.ChevronRight boxSize="20px" />
           </Button.Primary>
         </div>
       </div>

@@ -101,11 +101,10 @@ export const SelectNoteModal: React.FC<{
     SelectNoteModal_ReferenceQuery,
     {}
   );
-  const [activeNoteId, setActiveNoteId] =
-    React.useState<{
-      id: string;
-      documentId: string;
-    } | null>(null);
+  const [activeNoteId, setActiveNoteId] = React.useState<{
+    id: string;
+    documentId: string;
+  } | null>(null);
   const [mutate] =
     useMutation<selectNoteModal_NoteCreateMutation>(NoteCreateMutation);
 
@@ -158,21 +157,23 @@ export const SelectNoteModal: React.FC<{
           <Modal.Actions>
             <Modal.ActionGroup>
               <div>
-                <Button.Tertiary onClick={props.onClose}>Abort</Button.Tertiary>
+                <Button.Tertiary onClick={props.onClose}>
+                  Annuler
+                </Button.Tertiary>
               </div>
               <div>
                 <Button.Primary tabIndex={1} onClick={attachNewNote}>
-                  Create new Note
+                  Créer une note
                 </Button.Primary>
               </div>
-              <OrSeperator>or</OrSeperator>
+              <OrSeperator>ou</OrSeperator>
               <div>
                 <Button.Primary
                   tabIndex={1}
                   onClick={attachExistingNote}
                   disabled={activeNoteId === null}
                 >
-                  Link Note
+                  Lier une note
                 </Button.Primary>
               </div>
             </Modal.ActionGroup>

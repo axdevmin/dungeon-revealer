@@ -903,6 +903,23 @@ export const Heading = createIcon({
   },
   path: <path d="M5.5 20V4M18.5 20V4M5.5 12h13" stroke="currentColor" />,
 });
+export const LogOut = createIcon({
+  displayName: "LogOut",
+  viewBox: "0 0 24 24",
+  defaultProps: {
+    fill: "none",
+    strokeWidth: 2,
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+  },
+  path: (
+    <>
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" stroke="currentColor" />
+      <polyline points="16 17 21 12 16 7" stroke="currentColor" />
+      <line x1="21" y1="12" x2="9" y2="12" stroke="currentColor" />
+    </>
+  ),
+});
 export const Strikethrough = createIcon({
   displayName: "Strikethrough",
   viewBox: "0 0 24 24",

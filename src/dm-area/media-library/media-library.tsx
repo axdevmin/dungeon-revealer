@@ -419,12 +419,12 @@ const EditImageModal: React.FC<{
     <Modal onClickOutside={onClose} onPressEscape={onClose}>
       <Modal.Dialog size={ModalDialogSize.SMALL}>
         <Modal.Header>
-          <Modal.Heading3>Edit Image</Modal.Heading3>
+          <Modal.Heading3>Modifier l'image</Modal.Heading3>
         </Modal.Header>
         <Modal.Body>
           <InputGroup
             autoFocus
-            placeholder="Map title"
+            placeholder="Titre"
             value={inputValue}
             onChange={onChangeInputValue}
             error={null}
@@ -436,14 +436,14 @@ const EditImageModal: React.FC<{
               <div>
                 <Button.Tertiary onClick={onDelete} type="button" danger>
                   <Icon.Trash boxSize="18px" />
-                  <span>Delete</span>
+                  <span>Supprimer</span>
                 </Button.Tertiary>
               </div>
             </Modal.ActionGroup>
             <Modal.ActionGroup>
               <div>
                 <Button.Tertiary onClick={onClose} type="button">
-                  <span>Close</span>
+                  <span>Fermer</span>
                 </Button.Tertiary>
               </div>
               <div>
@@ -454,7 +454,7 @@ const EditImageModal: React.FC<{
                     onConfirm({ title: inputValue });
                   }}
                 >
-                  <span>Save</span>
+                  <span>Enregistrer</span>
                 </Button.Primary>
               </div>
             </Modal.ActionGroup>

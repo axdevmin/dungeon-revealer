@@ -75,7 +75,7 @@ export const NoteEditorActiveItem: React.FC<{
     <>
       {isEditMode ? (
         <EditorContainer>
-          <React.Suspense fallback="Loading...">
+          <React.Suspense fallback="Chargement...">
             <MarkdownEditor
               value={content}
               onChange={setContent}

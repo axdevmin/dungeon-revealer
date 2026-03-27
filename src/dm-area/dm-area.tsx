@@ -116,9 +116,11 @@ const DmArea_MapQuery = graphql`
 const Content = ({
   socket,
   password: dmPassword,
+  onLogout,
 }: {
   socket: Socket;
   password: string;
+  onLogout: () => void;
 }): React.ReactElement => {
   const [loadedMapId, setLoadedMapId] = useLoadedMapId();
 
@@ -482,6 +484,7 @@ const Content = ({
                 setMode({ title: "MEDIA_LIBRARY" });
               }}
               updateToken={updateToken}
+              onLogout={onLogout}
             />
           </div>
         </LoadedMapDiv>
@@ -498,8 +501,10 @@ const Content = ({
 
 const DmAreaRenderer = ({
   password,
+  onLogout,
 }: {
   password: string;
+  onLogout: () => void;
 }): React.ReactElement => {
   const socket = useSocket();
 
@@ -511,7 +516,7 @@ const DmAreaRenderer = ({
         isMapOnly={false}
         role="DM"
       >
-        <Content socket={socket} password={password} />
+        <Content socket={socket} password={password} onLogout={onLogout} />
       </AuthenticatedAppShell>
     </AccessTokenProvider>
   );
@@ -556,7 +561,7 @@ export const DmArea = () => {
   );
 
   if (mode === "loading") {
-    return <SplashScreen text="Loading...." />;
+    return <SplashScreen text="Chargement..." />;
   } else if (mode === "authenticate") {
     return (
       <AuthenticationScreen
@@ -569,7 +574,15 @@ export const DmArea = () => {
       />
     );
   } else if (mode === "authenticated") {
-    return <DmAreaRenderer password={dmPassword} />;
+    return (
+      <DmAreaRenderer
+        password={dmPassword}
+        onLogout={() => {
+          setDmPassword("");
+          setMode("authenticate");
+        }}
+      />
+    );
   }
   return null;
 };
