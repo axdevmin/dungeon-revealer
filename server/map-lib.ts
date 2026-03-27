@@ -258,6 +258,19 @@ export const mapCreate = (params: {
     })
   );
 
+export const mapCreateFromUrl = (params: { title: string; videoUrl: string }) =>
+  pipe(
+    auth.requireAdmin(),
+    RT.chainW(() => RT.ask<MapsDependency>()),
+    RT.chain((deps) => () => async (): Promise<MapCreateResult> => {
+      const createdMap = await deps.maps.createMapFromUrl({
+        title: params.title,
+        videoUrl: params.videoUrl,
+      });
+      return { type: "success", createdMap };
+    })
+  );
+
 export const mapDelete = (params: { mapId: string }) =>
   pipe(
     auth.requireAdmin(),

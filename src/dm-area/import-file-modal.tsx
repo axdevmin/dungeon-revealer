@@ -166,7 +166,7 @@ const ImageImportModal: React.FC<{
           input: {
             sha256: hash,
             extension: file.name.split(".").pop() ?? "",
-            mediaType: mediaType,
+            mediaType: mediaType as "image" | "gif" | "video",
           },
         },
       });
@@ -228,54 +228,68 @@ const ImageImportModal: React.FC<{
   const areButtonsDisabled = isImportingMediaLibraryItem || isCreatingMap;
 
   return (
-    <Modal onPressEscape={close} onClickOutside={close}>
+    <Modal
+      onPressEscape={areButtonsDisabled ? () => undefined : close}
+      onClickOutside={areButtonsDisabled ? () => undefined : close}
+    >
       <Modal.Dialog>
         <Modal.Header>
-          <h3>Import Image or Video</h3>
+          <h3>Importer une image ou vidéo</h3>
         </Modal.Header>
         <Modal.Body>
-          {objectUrl ? <PreviewImage src={objectUrl} /> : null}
-          <FileTitle>{fileTitleWithoutExtension}</FileTitle>
-          <MediaTypeSelector>
-            <label>
-              <strong>Media Type:</strong>
-              <select
-                value={mediaType}
-                onChange={(e) => setMediaType(e.target.value as MediaType)}
-              >
-                <option value="image">Image (PNG, JPG, WebP)</option>
-                <option value="gif">Animated GIF</option>
-                <option value="video">Video (MP4, WebM, OGG)</option>
-              </select>
-            </label>
-          </MediaTypeSelector>
+          {areButtonsDisabled ? (
+            <div style={{ textAlign: "center", padding: "8px 0" }}>
+              <LoadingSpinner state="inProgress" />
+              <p style={{ marginTop: 8, color: "#555" }}>
+                Importation en cours...
+              </p>
+            </div>
+          ) : (
+            <>
+              {objectUrl ? <PreviewImage src={objectUrl} /> : null}
+              <FileTitle>{fileTitleWithoutExtension}</FileTitle>
+              <MediaTypeSelector>
+                <label>
+                  <strong>Type de média :</strong>
+                  <select
+                    value={mediaType}
+                    onChange={(e) => setMediaType(e.target.value as MediaType)}
+                  >
+                    <option value="image">Image (PNG, JPG, WebP)</option>
+                    <option value="gif">GIF animé</option>
+                    <option value="video">Vidéo (MP4, WebM, OGG)</option>
+                  </select>
+                </label>
+              </MediaTypeSelector>
+            </>
+          )}
         </Modal.Body>
         <Modal.Footer>
           <Modal.Actions>
             <Modal.ActionGroup>
-              <Button.Tertiary tabIndex={1} onClick={close}>
-                Close
+              <Button.Tertiary
+                tabIndex={1}
+                onClick={close}
+                disabled={areButtonsDisabled}
+              >
+                Fermer
               </Button.Tertiary>
             </Modal.ActionGroup>
-            <Modal.ActionGroup>
-              <div>
-                <Button.Primary
-                  disabled={areButtonsDisabled}
-                  onClick={onClickImportMediaLibraryItem}
-                >
-                  Import into Media Library
-                </Button.Primary>
-              </div>
-              <OrSeperator>or</OrSeperator>
-              <div>
-                <Button.Primary
-                  disabled={areButtonsDisabled}
-                  onClick={onClickCreateMap}
-                >
-                  Create Map
-                </Button.Primary>
-              </div>
-            </Modal.ActionGroup>
+            {!areButtonsDisabled && (
+              <Modal.ActionGroup>
+                <div>
+                  <Button.Primary onClick={onClickImportMediaLibraryItem}>
+                    Importer dans la médiathèque
+                  </Button.Primary>
+                </div>
+                <OrSeperator>ou</OrSeperator>
+                <div>
+                  <Button.Primary onClick={onClickCreateMap}>
+                    Nouvelle carte
+                  </Button.Primary>
+                </div>
+              </Modal.ActionGroup>
+            )}
           </Modal.Actions>
         </Modal.Footer>
       </Modal.Dialog>
@@ -565,11 +579,11 @@ export const ImportFileModal: React.FC<{
       <Modal onPressEscape={close} onClickOutside={close}>
         <Modal.Dialog>
           <Modal.Header>
-            <h3>Invalid File</h3>
+            <h3>Fichier invalide</h3>
           </Modal.Header>
           <Modal.Body>
-            Only images, GIFs, videos, zip files and markdown files can be
-            imported into Dungeon Revealer.
+            Seuls les images, GIFs, vidéos, fichiers zip et fichiers markdown
+            peuvent être importés dans Navis.
           </Modal.Body>
           <Modal.Footer>
             <Modal.Actions>

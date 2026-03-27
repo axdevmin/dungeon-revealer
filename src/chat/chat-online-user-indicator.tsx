@@ -6,7 +6,7 @@ import { chatOnlineUserIndicator_data } from "./__generated__/chatOnlineUserIndi
 const ChatOnlineUserIndicatorRenderer: React.FC<{
   data: chatOnlineUserIndicator_data;
 }> = ({ data }) => {
-  return <>{data.usersCount} Online</>;
+  return <>{data.usersCount} en ligne</>;
 };
 
 export const ChatOnlineUserIndicator = createFragmentContainer(

@@ -155,7 +155,7 @@ export const NoteSearch = (props: {
           autoFocus
           onChange={(ev) => setQuery(ev.target.value)}
           value={query}
-          placeholder="What are you looking for?"
+          placeholder="Que cherchez-vous ?"
         />
       </InputLabel>
       <ResultContainer>
