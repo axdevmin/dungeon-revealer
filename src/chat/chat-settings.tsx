@@ -29,7 +29,7 @@ const ChatSettingsRenderer: React.FC<{ data: chatSettings_data }> = ({
   return (
     <>
       <label>
-        <LabelText>Name</LabelText>
+        <LabelText>Nom</LabelText>
         <Input
           value={name}
           onChange={(ev) => {
@@ -43,32 +43,32 @@ const ChatSettingsRenderer: React.FC<{ data: chatSettings_data }> = ({
         style={{ marginTop: 8, marginLeft: "auto" }}
       >
         <Icon.Check boxSize="16px" />
-        <span>Save</span>
+        <span>Enregistrer</span>
       </Button.Primary>
       <div style={{ height: 24 }} />
       <label>
-        <LabelText>Chat Sound</LabelText>
+        <LabelText>Son du chat</LabelText>
         <HorizontalNavigation.Group>
           <HorizontalNavigation.Button
             small
             isActive={soundSettings.value === "all"}
             onClick={() => soundSettings.setValue("all")}
           >
-            All
+            Tout
           </HorizontalNavigation.Button>
           <HorizontalNavigation.Button
             small
             isActive={soundSettings.value === "dice-only"}
             onClick={() => soundSettings.setValue("dice-only")}
           >
-            Dice only
+            Dés uniquement
           </HorizontalNavigation.Button>
           <HorizontalNavigation.Button
             small
             isActive={soundSettings.value === "none"}
             onClick={() => soundSettings.setValue("none")}
           >
-            None
+            Aucun
           </HorizontalNavigation.Button>
         </HorizontalNavigation.Group>
       </label>

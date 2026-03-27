@@ -18,6 +18,7 @@ import { selectMapModal_MapList_MapsFragment$key } from "./__generated__/selectM
 import { useInvokeOnScrollEnd } from "../hooks/use-invoke-on-scroll-end";
 import { selectMapModal_ActiveMap_MapFragment$key } from "./__generated__/selectMapModal_ActiveMap_MapFragment.graphql";
 import { selectMapModal_ActiveMapQuery } from "./__generated__/selectMapModal_ActiveMapQuery.graphql";
+import { selectMapModal_MapCreateFromUrlMutation } from "./__generated__/selectMapModal_MapCreateFromUrlMutation.graphql";
 
 type CreateNewMapButtonProps = {
   children: React.ReactChild;
@@ -46,6 +47,7 @@ enum ModalType {
   EDIT_TITLE = "EDIT_TITLE",
   DELETE_MAP = "DELETE_MAP",
   CREATE_MAP = "CREATE_MAP",
+  CREATE_MAP_FROM_URL = "CREATE_MAP_FROM_URL",
 }
 
 type ModalStates =
@@ -54,6 +56,9 @@ type ModalStates =
       data: {
         file: File;
       };
+    }
+  | {
+      type: ModalType.CREATE_MAP_FROM_URL;
     }
   | {
       type: ModalType.DELETE_MAP;
@@ -285,7 +290,7 @@ const ActiveMap = (props: {
             }}
           >
             <Icon.Trash boxSize="20px" />
-            <span>Delete</span>
+            <span>Supprimer</span>
           </Button.Tertiary>
         </div>
         <div style={{ marginLeft: "auto" }}>
@@ -296,7 +301,7 @@ const ActiveMap = (props: {
             }}
           >
             <Icon.Check boxSize="20px" />
-            <span>Load Map</span>
+            <span>Charger la carte</span>
           </Button.Primary>
         </div>
       </div>
@@ -343,6 +348,30 @@ export const SelectMapModal = ({
     { skip: !activeMapId }
   );
 
+  const [mapCreateFromUrl] =
+    useMutation<selectMapModal_MapCreateFromUrlMutation>(
+      graphql`
+        mutation selectMapModal_MapCreateFromUrlMutation(
+          $input: MapCreateFromUrlInput!
+        ) {
+          mapCreateFromUrl(input: $input) {
+            ... on MapCreateSuccess {
+              __typename
+              createdMap {
+                id
+                title
+                mapImageUrl
+              }
+            }
+            ... on MapCreateError {
+              __typename
+              reason
+            }
+          }
+        }
+      `
+    );
+
   const [mapImageRequestUpload] =
     useMutation<selectMapModal_MapImageRequestUploadMutation>(
       SelectMapModal_MapImageRequestUploadMutation
@@ -384,7 +413,7 @@ export const SelectMapModal = ({
         <Modal.Dialog>
           <Modal.Header>
             <Modal.Heading2>
-              <Icon.Map boxSize="28px" /> Map Library
+              <Icon.Map boxSize="28px" /> Bibliothèque de cartes
             </Modal.Heading2>
             <div style={{ flex: 1, textAlign: "right" }}>
               {canClose ? (
@@ -393,7 +422,7 @@ export const SelectMapModal = ({
                   style={{ marginLeft: 8 }}
                   onClick={closeModal}
                 >
-                  Close
+                  Fermer
                 </Button.Tertiary>
               ) : null}
             </div>
@@ -410,7 +439,7 @@ export const SelectMapModal = ({
               >
                 <Input
                   tabIndex={1}
-                  placeholder="Filter"
+                  placeholder="Filtrer"
                   value={filter}
                   onChange={onChangeFilter}
                   onKeyDown={(ev) => {
@@ -443,9 +472,19 @@ export const SelectMapModal = ({
                   }}
                 >
                   <>
-                    <Icon.Plus boxSize="20px" /> <span>Create New Map</span>
+                    <Icon.Plus boxSize="20px" /> <span>Nouvelle carte</span>
                   </>
                 </CreateNewMapButton>
+                <Button.Tertiary
+                  tabIndex={1}
+                  fullWidth
+                  style={{ marginTop: 4 }}
+                  onClick={() =>
+                    setModalState({ type: ModalType.CREATE_MAP_FROM_URL })
+                  }
+                >
+                  <Icon.Play boxSize="20px" /> <span>Carte YouTube</span>
+                </Button.Tertiary>
               </Modal.Footer>
             </Modal.Aside>
             {activeMapResponse.data?.map ? (
@@ -580,9 +619,135 @@ export const SelectMapModal = ({
               setModalState(null);
             }}
           />
+        ) : modalState.type === ModalType.CREATE_MAP_FROM_URL ? (
+          <YouTubeUrlModal
+            closeModal={() => setModalState(null)}
+            onCreate={(title, videoUrl) => {
+              mapCreateFromUrl({
+                variables: { input: { title, videoUrl } },
+                updater: (store, result) => {
+                  if (result.mapCreateFromUrl.__typename !== "MapCreateSuccess")
+                    return;
+                  const mapsConnection = store.get(mapsConnectionIdRef.current);
+                  if (mapsConnection == null) return;
+                  const createdMap = store.get(
+                    result.mapCreateFromUrl.createdMap.id
+                  );
+                  if (createdMap == null) return;
+                  const edge = ConnectionHandler.createEdge(
+                    store,
+                    mapsConnection,
+                    createdMap,
+                    "Map"
+                  );
+                  ConnectionHandler.insertEdgeAfter(mapsConnection, edge);
+                },
+                onCompleted: (response) => {
+                  if (
+                    response.mapCreateFromUrl.__typename === "MapCreateSuccess"
+                  ) {
+                    setActiveMapId(response.mapCreateFromUrl.createdMap.id);
+                  }
+                  setModalState(null);
+                },
+              });
+            }}
+          />
         ) : null
       ) : null}
     </>
+  );
+};
+
+const isValidYouTubeUrl = (url: string): boolean => {
+  try {
+    const u = new URL(url);
+    if (u.hostname.includes("youtube.com")) {
+      return !!u.searchParams.get("v");
+    }
+    if (u.hostname === "youtu.be") {
+      return u.pathname.length > 1;
+    }
+    return false;
+  } catch {
+    return false;
+  }
+};
+
+const YouTubeUrlModal = ({
+  closeModal,
+  onCreate,
+}: {
+  closeModal: () => void;
+  onCreate: (title: string, videoUrl: string) => void;
+}) => {
+  const [title, setTitle] = React.useState("");
+  const [url, setUrl] = React.useState("");
+  const [titleError, setTitleError] = React.useState<string | null>(null);
+  const [urlError, setUrlError] = React.useState<string | null>(null);
+
+  const submit = React.useCallback(() => {
+    let hasError = false;
+    if (!title.trim()) {
+      setTitleError("Veuillez saisir un titre.");
+      hasError = true;
+    }
+    if (!url.trim()) {
+      setUrlError("Veuillez saisir une URL YouTube.");
+      hasError = true;
+    } else if (!isValidYouTubeUrl(url.trim())) {
+      setUrlError("URL invalide. Ex: https://www.youtube.com/watch?v=...");
+      hasError = true;
+    }
+    if (hasError) return;
+    onCreate(title.trim(), url.trim());
+    closeModal();
+  }, [title, url, onCreate, closeModal]);
+
+  return (
+    <Modal onClickOutside={closeModal} onPressEscape={closeModal}>
+      <Modal.Dialog size={ModalDialogSize.SMALL} onSubmit={submit}>
+        <Modal.Header>
+          <Modal.Heading3>Carte YouTube</Modal.Heading3>
+        </Modal.Header>
+        <Modal.Body>
+          <InputGroup
+            autoFocus
+            placeholder="Titre de la carte"
+            value={title}
+            onChange={(e) => {
+              setTitle(e.target.value);
+              setTitleError(null);
+            }}
+            error={titleError}
+          />
+          <div style={{ height: 8 }} />
+          <InputGroup
+            placeholder="https://www.youtube.com/watch?v=..."
+            value={url}
+            onChange={(e) => {
+              setUrl(e.target.value);
+              setUrlError(null);
+            }}
+            error={urlError}
+          />
+        </Modal.Body>
+        <Modal.Footer>
+          <Modal.Actions>
+            <Modal.ActionGroup>
+              <div>
+                <Button.Tertiary type="button" onClick={closeModal}>
+                  Annuler
+                </Button.Tertiary>
+              </div>
+              <div>
+                <Button.Primary type="submit">Nouvelle carte</Button.Primary>
+              </div>
+            </Modal.ActionGroup>
+          </Modal.Actions>
+        </Modal.Footer>
+      </Modal.Dialog>
+    </Modal>
   );
 };
 
@@ -619,12 +784,12 @@ const CreateNewMapModal = ({
     <Modal onClickOutside={closeModal} onPressEscape={closeModal}>
       <Modal.Dialog size={ModalDialogSize.SMALL}>
         <Modal.Header>
-          <Modal.Heading3>Create new Map</Modal.Heading3>
+          <Modal.Heading3>Nouvelle carte</Modal.Heading3>
         </Modal.Header>
         <Modal.Body>
           <InputGroup
             autoFocus
-            placeholder="Map title"
+            placeholder="Titre de la carte"
             value={inputValue}
             onChange={onChangeInputValue}
             error={error}
@@ -635,7 +800,7 @@ const CreateNewMapModal = ({
             <Modal.ActionGroup>
               <div>
                 <Button.Tertiary onClick={closeModal} type="button">
-                  Abort
+                  Annuler
                 </Button.Tertiary>
               </div>
               <div>
@@ -643,14 +808,14 @@ const CreateNewMapModal = ({
                   type="submit"
                   onClick={() => {
                     if (inputValue.trim().length === 0) {
-                      setError("Please enter a map name.");
+                      setError("Veuillez saisir un nom de carte.");
                       return;
                     }
                     createMap(inputValue);
                     closeModal();
                   }}
                 >
-                  Create Map
+                  Créer la carte
                 </Button.Primary>
               </div>
             </Modal.ActionGroup>
@@ -675,7 +840,7 @@ const ChangeMapTitleModal: React.FC<{
   );
   const submit = React.useCallback(() => {
     if (inputValue.trim().length === 0) {
-      setError("Please enter a map name.");
+      setError("Veuillez saisir un nom de carte.");
       return;
     }
     updateMap(inputValue);
@@ -686,13 +851,13 @@ const ChangeMapTitleModal: React.FC<{
     <Modal onClickOutside={closeModal} onPressEscape={closeModal}>
       <Modal.Dialog size={ModalDialogSize.SMALL} onSubmit={submit}>
         <Modal.Header>
-          <Modal.Heading3>Change Title</Modal.Heading3>
+          <Modal.Heading3>Modifier le titre</Modal.Heading3>
         </Modal.Header>
 
         <Modal.Body>
           <InputGroup
             autoFocus
-            placeholder="New Map title"
+            placeholder="Nouveau titre"
             value={inputValue}
             onChange={onChangeInputValue}
             error={error}
@@ -703,11 +868,11 @@ const ChangeMapTitleModal: React.FC<{
             <Modal.ActionGroup>
               <div>
                 <Button.Tertiary type="button" onClick={closeModal}>
-                  Abort
+                  Annuler
                 </Button.Tertiary>
               </div>
               <div>
-                <Button.Primary type="submit">Change Map Title</Button.Primary>
+                <Button.Primary type="submit">Modifier le titre</Button.Primary>
               </div>
             </Modal.ActionGroup>
           </Modal.Actions>
@@ -725,15 +890,15 @@ const DeleteMapModal: React.FC<{
     <Modal onClickOutside={closeModal} onPressEscape={closeModal}>
       <Modal.Dialog size={ModalDialogSize.SMALL}>
         <Modal.Header>
-          <Modal.Heading3>Delete Map</Modal.Heading3>
+          <Modal.Heading3>Supprimer la carte</Modal.Heading3>
         </Modal.Header>
-        <Modal.Body>Do you really want to delete this map?</Modal.Body>
+        <Modal.Body>Voulez-vous vraiment supprimer cette carte ?</Modal.Body>
         <Modal.Footer>
           <Modal.Actions>
             <Modal.ActionGroup>
               <div>
                 <Button.Tertiary type="submit" onClick={closeModal}>
-                  Abort
+                  Annuler
                 </Button.Tertiary>
               </div>
               <div>
@@ -743,7 +908,7 @@ const DeleteMapModal: React.FC<{
                     deleteMap();
                   }}
                 >
-                  Delete
+                  Supprimer
                 </Button.Primary>
               </div>
             </Modal.ActionGroup>

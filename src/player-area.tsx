@@ -77,10 +77,12 @@ const PlayerMap = ({
   fetch,
   socket,
   isMapOnly,
+  onLogout,
 }: {
   fetch: typeof window.fetch;
   socket: ReturnType<typeof useSocket>;
   isMapOnly: boolean;
+  onLogout: () => void;
 }) => {
   const currentMap = useQuery<playerArea_PlayerMap_ActiveMapQuery>(
     PlayerMap_ActiveMapQuery
@@ -276,7 +278,7 @@ const PlayerMap = ({
                           }}
                         >
                           <Icon.Compass boxSize="20px" />
-                          <Icon.Label>Center Map</Icon.Label>
+                          <Icon.Label>Centrer</Icon.Label>
                         </Toolbar.Button>
                       </Toolbar.Item>
                       <Toolbar.Item isActive>
@@ -293,7 +295,7 @@ const PlayerMap = ({
                           }}
                         >
                           <Icon.ZoomIn boxSize="20px" />
-                          <Icon.Label>Zoom In</Icon.Label>
+                          <Icon.Label>Zoom +</Icon.Label>
                         </Toolbar.LongPressButton>
                       </Toolbar.Item>
                       <Toolbar.Item isActive>
@@ -310,7 +312,7 @@ const PlayerMap = ({
                           }}
                         >
                           <Icon.ZoomOut boxSize="20px" />
-                          <Icon.Label>Zoom Out</Icon.Label>
+                          <Icon.Label>Zoom -</Icon.Label>
                         </Toolbar.LongPressButton>
                       </Toolbar.Item>
                       <Toolbar.Item isActive>
@@ -327,6 +329,12 @@ const PlayerMap = ({
                           <Icon.Label>Notes</Icon.Label>
                         </Toolbar.LongPressButton>
                       </Toolbar.Item>
+                      <Toolbar.Item isActive>
+                        <Toolbar.Button onClick={onLogout}>
+                          <Icon.LogOut boxSize="20px" />
+                          <Icon.Label>Quitter</Icon.Label>
+                        </Toolbar.Button>
+                      </Toolbar.Item>
                     </Toolbar.Group>
                   </React.Fragment>
                 ) : null}
@@ -336,7 +344,7 @@ const PlayerMap = ({
         )
       ) : (
         <AbsoluteFullscreenContainer>
-          <SplashScreen text="Ready." />
+          <SplashScreen text="En attente d'une carte..." />
         </AbsoluteFullscreenContainer>
       )}
     </>
@@ -363,6 +371,7 @@ const AuthenticatedContent: React.FC<{
   pcPassword: string;
   localFetch: typeof fetch;
   isMapOnly: boolean;
+  onLogout: () => void;
 }> = (props) => {
   const socket = useSocket();
 
@@ -377,6 +386,7 @@ const AuthenticatedContent: React.FC<{
         fetch={props.localFetch}
         socket={socket}
         isMapOnly={props.isMapOnly}
+        onLogout={props.onLogout}
       />
     </AuthenticatedAppShell>
   );
@@ -428,7 +438,7 @@ export const PlayerArea: React.FC<{
   );
 
   if (mode === "LOADING") {
-    return <SplashScreen text="Loading..." />;
+    return <SplashScreen text="Chargement..." />;
   }
 
   if (mode === "AUTHENTICATE") {
@@ -449,6 +459,10 @@ export const PlayerArea: React.FC<{
         localFetch={localFetch}
         pcPassword={usedPassword}
         isMapOnly={props.isMapOnly}
+        onLogout={() => {
+          setPcPassword("");
+          setMode("AUTHENTICATE");
+        }}
       />
     );
   }

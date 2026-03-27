@@ -12,8 +12,8 @@ export const useConfirmationDialog = () => {
         header,
         body,
         onConfirm,
-        confirmButtonText = "Confirm",
-        cancelButtonText = "Abort",
+        confirmButtonText = "Confirmer",
+        cancelButtonText = "Annuler",
       }: {
         header: React.ReactNode;
         body: React.ReactNode;

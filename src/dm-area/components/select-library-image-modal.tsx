@@ -221,7 +221,7 @@ export const SelectLibraryImageModal: React.FC<{
           <Modal.Actions>
             <Modal.ActionGroup>
               <div>
-                <Button.Tertiary onClick={close}>Abort</Button.Tertiary>
+                <Button.Tertiary onClick={close}>Annuler</Button.Tertiary>
               </div>
               <div>
                 <Button.Primary
@@ -229,7 +229,7 @@ export const SelectLibraryImageModal: React.FC<{
                   tabIndex={1}
                   onClick={() => selectedFile && onSelect(selectedFile.id)}
                 >
-                  Select Image
+                  Sélectionner l'image
                 </Button.Primary>
               </div>
             </Modal.ActionGroup>

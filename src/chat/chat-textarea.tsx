@@ -101,7 +101,7 @@ export const ChatTextArea: React.FC<{}> = () => {
       onKeyDown={onKeyDown}
     >
       <Textarea
-        placeholder="Write something!"
+        placeholder="Écrire un message..."
         value={value}
         onChange={onChange}
         rows={5}

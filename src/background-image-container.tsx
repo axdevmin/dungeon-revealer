@@ -1,6 +1,5 @@
 import React from "react";
 import styled from "@emotion/styled/macro";
-import { buildUrl } from "./public-url";
 
 export const Container = styled.div`
   height: 100vh;
@@ -9,11 +8,11 @@ export const Container = styled.div`
   justify-content: center;
   align-items: center;
 
-  background-image: url("${buildUrl("/images/DungeonEntranceMedium.jpg")}");
-  background-repeat: no-repeat;
-  background-attachment: fixed;
-  background-position: center;
+  background-image: linear-gradient(rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.55)),
+    url("/images/navis-background.jpg");
   background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
 `;
 
 const Inner = styled.div`

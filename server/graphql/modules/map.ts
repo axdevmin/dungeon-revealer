@@ -391,6 +391,26 @@ export const mutationFields = [
     resolve: (_, { input }, context) => RT.run(lib.mapCreate(input), context),
   }),
   t.field({
+    name: "mapCreateFromUrl",
+    description: "Create a new map from a video URL (e.g. YouTube).",
+    type: t.NonNull(GraphQLMapCreateResult),
+    args: {
+      input: t.arg(
+        t.NonNullInput(
+          t.inputObjectType({
+            name: "MapCreateFromUrlInput",
+            fields: () => ({
+              title: t.arg(t.NonNullInput(t.String)),
+              videoUrl: t.arg(t.NonNullInput(t.String)),
+            }),
+          })
+        )
+      ),
+    },
+    resolve: (_, { input }, context) =>
+      RT.run(lib.mapCreateFromUrl(input), context),
+  }),
+  t.field({
     name: "mapDelete",
     description: "Delete a map.",
     type: t.NonNull(t.Boolean),
@@ -563,8 +583,11 @@ const GraphQLMapType = t.objectType<MapEntity>({
       name: "mapImageUrl",
       description: "The URL of the map image.",
       type: t.NonNull(t.String),
-      resolve: (source, _, context) =>
-        `${context.publicUrl}/api/map/${
+      resolve: (source, _, context) => {
+        if (source.mediaType === "video-url") {
+          return source.mapPath ?? "";
+        }
+        return `${context.publicUrl}/api/map/${
           source.id
         }/map?authorization=${encodeURIComponent(
           (context.session.role === "admin"
@@ -572,7 +595,8 @@ const GraphQLMapType = t.objectType<MapEntity>({
             : context.session.role === "user"
             ? process.env["PC_PASSWORD"]
             : null) ?? ""
-        )}`,
+        )}`;
+      },
     }),
     t.field({
       name: "fogProgressImageUrl",
