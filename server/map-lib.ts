@@ -3,7 +3,7 @@ import * as RT from "fp-ts/lib/ReaderTask";
 import { randomUUID } from "crypto";
 import * as path from "path";
 import * as fs from "fs-extra";
-import type { MapEntity, MapGridEntity, Maps } from "./maps";
+import type { MapEntity, MapGridEntity, Maps, WeatherSettings } from "./maps";
 import * as auth from "./auth";
 import type { Settings } from "./settings";
 import { invalidateResourcesRT } from "./live-query-store";
@@ -358,6 +358,32 @@ export const setActiveMap = (params: { activeMapId: string }) =>
         deps.settings.set("currentMapId", params.activeMapId)
     ),
     RT.map(() => true)
+  );
+
+export type MapUpdateWeatherResult = {
+  updatedMap: MapEntity;
+};
+
+export const mapUpdateWeather = (params: {
+  mapId: string;
+  weatherSettings: WeatherSettings;
+}) =>
+  pipe(
+    auth.requireAdmin(),
+    RT.chainW(() => RT.ask<MapsDependency>()),
+    RT.chain(
+      (deps) => () => () =>
+        deps.maps.updateMapSettings(params.mapId, {
+          weatherSettings: params.weatherSettings,
+        })
+    ),
+    RT.chainW((map) =>
+      pipe(
+        invalidateResourcesRT([`Map:${map.id}`]),
+        RT.map(() => map)
+      )
+    ),
+    RT.map((updatedMap): MapUpdateWeatherResult => ({ updatedMap }))
   );
 
 export type MapPing = {

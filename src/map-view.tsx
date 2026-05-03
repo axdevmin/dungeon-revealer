@@ -51,6 +51,8 @@ import { mapView_MapPingRenderer_MapFragment$key } from "./__generated__/mapView
 import { mapView_MapPingSubscription } from "./__generated__/mapView_MapPingSubscription.graphql";
 import { UpdateTokenContext } from "./update-token-context";
 import { IsDungeonMasterContext } from "./is-dungeon-master-context";
+import { WeatherSystem } from "./weather-system";
+import type { WeatherSettings } from "./weather-types";
 
 type Vector2D = [number, number];
 
@@ -63,6 +65,8 @@ enum LayerRenderOrder {
   tokenGesture = 5,
   marker = 6,
   outline = 7,
+  weather = 8,
+  fog = 9,
 }
 
 // convert image relative to three.js
@@ -1341,7 +1345,7 @@ const FogAnimatedRenderer = (props: {
   });
 
   return (
-    <mesh>
+    <mesh renderOrder={LayerRenderOrder.fog}>
       <planeBufferGeometry
         attach="geometry"
         args={[props.width, props.height]}
@@ -1365,7 +1369,7 @@ const FogRenderer = React.memo(
     }
 
     return (
-      <mesh>
+      <mesh renderOrder={LayerRenderOrder.fog}>
         <planeBufferGeometry
           attach="geometry"
           args={[props.width, props.height]}
@@ -1401,6 +1405,26 @@ const MapRenderer = (props: {
   return (
     <>
       <group renderOrder={LayerRenderOrder.map}>
+        {/* Invisible plane that writes stencil=1 to the map area so weather
+            particles (rendered outside <Plane>) are clipped to the map. */}
+        <mesh renderOrder={-1}>
+          <planeBufferGeometry
+            attach="geometry"
+            args={[props.dimensions.width, props.dimensions.height]}
+          />
+          <meshBasicMaterial
+            attach="material"
+            colorWrite={false}
+            depthWrite={false}
+            depthTest={false}
+            stencilWrite={true}
+            stencilRef={1}
+            stencilFunc={THREE.AlwaysStencilFunc}
+            stencilZPass={THREE.ReplaceStencilOp}
+            stencilFail={THREE.ReplaceStencilOp}
+            stencilZFail={THREE.ReplaceStencilOp}
+          />
+        </mesh>
         {!props.hideMapMesh && (
           <mesh>
             <planeBufferGeometry
@@ -1456,6 +1480,7 @@ const MapViewRendererFragment = graphql`
 
 const MapViewRenderer = (props: {
   map: mapView_MapViewRendererFragment$key;
+  weatherConfig: WeatherSettings;
   mapImage: HTMLImageElement | null;
   mapVideo: HTMLVideoElement | null;
   isAnimating: boolean;
@@ -1860,6 +1885,7 @@ const MapViewRenderer = (props: {
           />
         ) : null}
       </Plane>
+      <WeatherSystem config={props.weatherConfig} />
     </SharedMapState.Provider>
   );
 };
@@ -1933,6 +1959,11 @@ const MapFragment = graphql`
     fogProgressImageUrl
     fogLiveImageUrl
     mediaType
+    weatherSettings {
+      type
+      intensity
+      windAngle
+    }
     ...mapView_MapViewRendererFragment
   }
 `;
@@ -2117,6 +2148,13 @@ export const MapView = (props: {
         <MapViewRenderer
           key={map.id}
           map={map}
+          weatherConfig={
+            (map.weatherSettings as WeatherSettings | null) ?? {
+              type: "none",
+              intensity: 0.5,
+              windAngle: 0,
+            }
+          }
           activeTool={props.activeTool}
           mapImage={mapImage}
           mapVideo={mapVideo}

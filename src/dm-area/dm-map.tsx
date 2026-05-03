@@ -95,6 +95,8 @@ import { dmMap_MapPingMutation } from "./__generated__/dmMap_MapPingMutation.gra
 import { UpdateTokenContext } from "../update-token-context";
 import { IsDungeonMasterContext } from "../is-dungeon-master-context";
 import { LazyLoadedMapView } from "../lazy-loaded-map-view";
+import { WeatherControls } from "./weather-controls";
+import { dmMap_WeatherButton_MapFragment$key } from "./__generated__/dmMap_WeatherButton_MapFragment.graphql";
 
 type ToolMapRecord = {
   name: string;
@@ -523,6 +525,51 @@ const TokenMarkerSettings = (): React.ReactElement => {
   );
 };
 
+const WeatherButtonMapFragment = graphql`
+  fragment dmMap_WeatherButton_MapFragment on Map {
+    weatherSettings {
+      type
+    }
+    ...weatherControls_MapFragment
+  }
+`;
+
+const WeatherButton = (props: {
+  map: dmMap_WeatherButton_MapFragment$key;
+}): React.ReactElement => {
+  const map = useFragment(WeatherButtonMapFragment, props.map);
+  const [isOpen, setIsOpen] = React.useState(false);
+  const ref = React.useRef<HTMLDivElement>(null);
+  useOnClickOutside(ref, () => setIsOpen(false));
+
+  const WEATHER_ICONS: Record<string, string> = {
+    none: "—",
+    sun: "☀️",
+    rain: "🌧️",
+    storm: "⛈️",
+    snow: "❄️",
+  };
+  const icon = WEATHER_ICONS[map.weatherSettings.type] ?? "—";
+
+  return (
+    <div ref={ref} style={{ position: "relative" }}>
+      <Toolbar.Item isActive>
+        <Toolbar.Button onClick={() => setIsOpen((v) => !v)}>
+          <span style={{ fontSize: "18px", lineHeight: 1 }}>{icon}</span>
+          <Icon.Label>Météo</Icon.Label>
+        </Toolbar.Button>
+      </Toolbar.Item>
+      {isOpen ? (
+        <div
+          style={{ position: "absolute", bottom: "100%", left: 0, zIndex: 10 }}
+        >
+          <WeatherControls map={map} />
+        </div>
+      ) : null}
+    </div>
+  );
+};
+
 const dmTools: Array<ToolMapRecord> = [
   {
     name: "Déplacer",
@@ -604,6 +651,7 @@ const DMMapFragment = graphql`
     ...mapContextMenuRenderer_MapFragment
     ...dmMap_GridSettingButton_MapFragment
     ...dmMap_GridConfigurator_MapFragment
+    ...dmMap_WeatherButton_MapFragment
   }
 `;
 
@@ -928,6 +976,7 @@ export const DmMap = (props: {
                     setToolOverride(ConfigureGridMapTool);
                   }}
                 />
+                <WeatherButton map={map} />
                 <Toolbar.Item isActive>
                   <Toolbar.Button
                     onClick={() => {

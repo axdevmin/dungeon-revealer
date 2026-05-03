@@ -101,6 +101,20 @@ type LegacyMapEntity = {
   mediaType?: MediaType;
 };
 
+export type WeatherType = "none" | "rain" | "storm" | "snow" | "sun";
+
+export type WeatherSettings = {
+  type: WeatherType;
+  intensity: number;
+  windAngle: number;
+};
+
+export const DEFAULT_WEATHER: WeatherSettings = {
+  type: "none",
+  intensity: 0.5,
+  windAngle: 0,
+};
+
 export type MapEntity = {
   id: string;
   title: string;
@@ -114,6 +128,7 @@ export type MapEntity = {
   fogLiveRevision: string;
   fogProgressRevision: string;
   mediaType: MediaType;
+  weatherSettings: WeatherSettings;
 };
 
 export class Maps {
@@ -182,6 +197,10 @@ export class Maps {
           "mediaType" in rawMap && rawMap.mediaType
             ? rawMap.mediaType
             : "image",
+        weatherSettings:
+          "weatherSettings" in rawMap && rawMap.weatherSettings
+            ? (rawMap.weatherSettings as WeatherSettings)
+            : { ...DEFAULT_WEATHER },
       };
 
       return map;
@@ -230,6 +249,7 @@ export class Maps {
         fogProgressRevision: randomUUID(),
         fogLiveRevision: randomUUID(),
         mediaType,
+        weatherSettings: { ...DEFAULT_WEATHER },
       };
 
       await fs.move(filePath, path.join(this._buildMapFolderPath(id), mapPath));
@@ -267,6 +287,7 @@ export class Maps {
         fogProgressRevision: randomUUID(),
         fogLiveRevision: randomUUID(),
         mediaType: "video-url",
+        weatherSettings: { ...DEFAULT_WEATHER },
       };
 
       await fs.writeFile(

@@ -1,0 +1,12 @@
+diff --git a/node_modules/engine.io/build/server.d.ts b/node_modules/engine.io/build/server.d.ts
+index dfe78e0..a6c01e9 100644
+--- a/node_modules/engine.io/build/server.d.ts
++++ b/node_modules/engine.io/build/server.d.ts
+@@ -1,6 +1,6 @@
+ import { EventEmitter } from "events";
+ import { Socket } from "./socket";
+-import { type PerMessageDeflateOptions } from "ws";
++import type { PerMessageDeflateOptions } from "ws";
+ import type { IncomingMessage, Server as HttpServer, ServerResponse } from "http";
+ import type { CorsOptions, CorsOptionsDelegate } from "cors";
+ import type { Duplex } from "stream";
