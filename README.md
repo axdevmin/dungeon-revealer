@@ -24,8 +24,16 @@ Fork de [dungeon-revealer](https://github.com/dungeon-revealer/dungeon-revealer)
 ## Lancer le projet
 
 ```bash
+
 npm install
-npm run dev
+npm run setup       # génère le schéma GraphQL + les types Relay
+
+# Terminal 1 — backend
+npm run start:server:dev
+
+# Terminal 2 — frontend
+npm run start:frontend:dev
+
 ```
 
 ---
