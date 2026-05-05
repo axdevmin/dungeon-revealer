@@ -92,11 +92,12 @@ import { dmMap_GridSettingButton_MapFragment$key } from "./__generated__/dmMap_G
 import { dmMap_mapUpdateGridMutation } from "./__generated__/dmMap_mapUpdateGridMutation.graphql";
 import { dmMap_GridConfigurator_MapFragment$key } from "./__generated__/dmMap_GridConfigurator_MapFragment.graphql";
 import { dmMap_MapPingMutation } from "./__generated__/dmMap_MapPingMutation.graphql";
+import { WeatherControls } from "./weather-controls";
+import { dmMap_WeatherButton_MapFragment$key } from "./__generated__/dmMap_WeatherButton_MapFragment.graphql";
+import { ErrorBoundary } from "../error-boundary";
 import { UpdateTokenContext } from "../update-token-context";
 import { IsDungeonMasterContext } from "../is-dungeon-master-context";
 import { LazyLoadedMapView } from "../lazy-loaded-map-view";
-import { WeatherControls } from "./weather-controls";
-import { dmMap_WeatherButton_MapFragment$key } from "./__generated__/dmMap_WeatherButton_MapFragment.graphql";
 
 type ToolMapRecord = {
   name: string;
@@ -709,7 +710,7 @@ export const DmMap = (props: {
     canvas.convertToBlob().then((blob) => {
       clipboard
         .write([
-          new ClipboardItem({
+          new (ClipboardItem as any)({
             [blob.type]: blob,
           }),
         ])
@@ -862,25 +863,27 @@ export const DmMap = (props: {
       ]}
     >
       <React.Suspense fallback={null}>
-        <LazyLoadedMapView
-          map={map}
-          activeTool={activeTool}
-          controlRef={controlRef}
-          sharedContexts={[
-            MarkAreaToolContext,
-            BrushToolContext,
-            ConfigureGridMapToolContext,
-            AreaSelectContext,
-            TokenMarkerContext,
-            NoteWindowActionsContext,
-            ReactRelayContext,
-            UpdateTokenContext,
-            IsDungeonMasterContext,
-            ContextMenuStoreContext,
-            SharedTokenStateStoreContext,
-          ]}
-          fogOpacity={0.5}
-        />
+        <ErrorBoundary>
+          <LazyLoadedMapView
+            map={map}
+            activeTool={activeTool}
+            controlRef={controlRef}
+            sharedContexts={[
+              MarkAreaToolContext,
+              BrushToolContext,
+              ConfigureGridMapToolContext,
+              AreaSelectContext,
+              TokenMarkerContext,
+              NoteWindowActionsContext,
+              ReactRelayContext,
+              UpdateTokenContext,
+              IsDungeonMasterContext,
+              ContextMenuStoreContext,
+              SharedTokenStateStoreContext,
+            ]}
+            fogOpacity={0.5}
+          />
+        </ErrorBoundary>
       </React.Suspense>
 
       {toolOverride !== ConfigureGridMapTool ? (

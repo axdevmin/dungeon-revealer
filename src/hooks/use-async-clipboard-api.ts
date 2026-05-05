@@ -1,30 +1,8 @@
 import * as React from "react";
 
-interface ClipboardItem {
-  new (input: { [contentType: string]: Blob }): ClipboardItem;
-}
-
-type AsyncClipboardWriteFunction = (
-  input: Array<ClipboardItem>
-) => Promise<void>;
-
-declare global {
-  interface Window {
-    ClipboardItem: ClipboardItem | undefined;
-  }
-
-  interface Clipboard {
-    write?: AsyncClipboardWriteFunction;
-  }
-}
-
-interface AsyncClipboard extends Clipboard {
-  write: AsyncClipboardWriteFunction;
-}
-
 type ClipboardApi = {
-  clipboard: AsyncClipboard;
-  ClipboardItem: ClipboardItem;
+  clipboard: typeof navigator.clipboard;
+  ClipboardItem: typeof window.ClipboardItem;
 };
 
 export const getAsyncClipboardApi: () => ClipboardApi | null = () => {
@@ -38,7 +16,7 @@ export const getAsyncClipboardApi: () => ClipboardApi | null = () => {
   }
   return {
     ClipboardItem: window.ClipboardItem,
-    clipboard: navigator.clipboard as AsyncClipboard,
+    clipboard: navigator.clipboard,
   };
 };
 

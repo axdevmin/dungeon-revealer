@@ -9,6 +9,7 @@ import { globalStyles } from "./global-styles";
 import { Modal } from "./modal";
 import * as UserStyleSheetOrchestrator from "./user-style-sheet-orchestrator";
 import { registerSoundPlayback } from "./register-sound-playback";
+import { ErrorBoundary } from "./error-boundary";
 
 loader.config({
   paths: {
@@ -35,21 +36,44 @@ const urlSearchParameter = new URLSearchParams(window.location.search);
 
 const main = async () => {
   let component = null;
-  switch (pathname) {
-    case "/dm": {
-      const { DmArea } = await import("./dm-area/dm-area");
-      component = <DmArea />;
-      break;
-    }
-    default: {
-      const isMapOnly = urlSearchParameter.get("map_only") !== null;
-      const password = urlSearchParameter.get("password");
+  try {
+    switch (pathname) {
+      case "/dm": {
+        const { DmArea } = await import("./dm-area/dm-area");
+        component = <DmArea />;
+        break;
+      }
+      default: {
+        const isMapOnly = urlSearchParameter.get("map_only") !== null;
+        const password = urlSearchParameter.get("password");
 
-      const { PlayerArea } = await import("./player-area");
-      component = (
-        <PlayerArea isMapOnly={isMapOnly} password={password || ""} />
-      );
+        const { PlayerArea } = await import("./player-area");
+        component = (
+          <PlayerArea isMapOnly={isMapOnly} password={password || ""} />
+        );
+      }
     }
+  } catch (error) {
+    console.error("Failed to load application:", error);
+    component = (
+      <ErrorBoundary
+        fallback={
+          <div
+            style={{ padding: 20, fontFamily: "sans-serif", color: "#e53e3e" }}
+          >
+            <h2>Échec du chargement de l'application</h2>
+            <p>Rechargez la page pour réessayer.</p>
+          </div>
+        }
+      >
+        <div
+          style={{ padding: 20, fontFamily: "sans-serif", color: "#e53e3e" }}
+        >
+          <h2>Échec du chargement de l'application</h2>
+          <p>Rechargez la page pour réessayer.</p>
+        </div>
+      </ErrorBoundary>
+    );
   }
   if (element) {
     render(
@@ -58,7 +82,7 @@ const main = async () => {
           <UserStyleSheetOrchestrator.Provider>
             <Modal.Provider>
               <Global styles={globalStyles} />
-              {component}
+              <ErrorBoundary>{component}</ErrorBoundary>
             </Modal.Provider>
           </UserStyleSheetOrchestrator.Provider>
         </ChakraProvider>

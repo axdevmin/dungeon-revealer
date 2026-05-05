@@ -53,6 +53,7 @@ import { UpdateTokenContext } from "./update-token-context";
 import { IsDungeonMasterContext } from "./is-dungeon-master-context";
 import { WeatherSystem } from "./weather-system";
 import type { WeatherSettings } from "./weather-types";
+import { APP_VERSION } from "./version";
 
 type Vector2D = [number, number];
 
@@ -1405,26 +1406,6 @@ const MapRenderer = (props: {
   return (
     <>
       <group renderOrder={LayerRenderOrder.map}>
-        {/* Invisible plane that writes stencil=1 to the map area so weather
-            particles (rendered outside <Plane>) are clipped to the map. */}
-        <mesh renderOrder={-1}>
-          <planeBufferGeometry
-            attach="geometry"
-            args={[props.dimensions.width, props.dimensions.height]}
-          />
-          <meshBasicMaterial
-            attach="material"
-            colorWrite={false}
-            depthWrite={false}
-            depthTest={false}
-            stencilWrite={true}
-            stencilRef={1}
-            stencilFunc={THREE.AlwaysStencilFunc}
-            stencilZPass={THREE.ReplaceStencilOp}
-            stencilFail={THREE.ReplaceStencilOp}
-            stencilZFail={THREE.ReplaceStencilOp}
-          />
-        </mesh>
         {!props.hideMapMesh && (
           <mesh>
             <planeBufferGeometry
@@ -1884,8 +1865,14 @@ const MapViewRenderer = (props: {
             handlerContext={toolContext}
           />
         ) : null}
+        <WeatherSystem
+          config={props.weatherConfig}
+          dimensions={{
+            width: dimensions.width,
+            height: dimensions.height,
+          }}
+        />
       </Plane>
-      <WeatherSystem config={props.weatherConfig} />
     </SharedMapState.Provider>
   );
 };
@@ -1894,6 +1881,21 @@ const MapCanvasContainer = styled.div`
   position: relative;
   height: 100%;
   touch-action: manipulation;
+`;
+
+const VersionBadge = styled.div`
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 100;
+  background: rgba(0, 0, 0, 0.55);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 10px;
+  font-family: monospace;
+  padding: 2px 6px;
+  border-radius: 3px;
+  pointer-events: none;
+  user-select: none;
 `;
 
 const YouTubeIframe = styled.iframe`
@@ -2112,7 +2114,10 @@ export const MapView = (props: {
     <Canvas
       camera={{ position: [0, 0, 5] }}
       pixelRatio={window.devicePixelRatio}
-      gl={isYouTubeMap ? { alpha: true } : undefined}
+      gl={{
+        stencil: true,
+        ...(isYouTubeMap ? { alpha: true } : undefined),
+      }}
       style={isYouTubeMap ? { background: "transparent" } : undefined}
       onCreated={
         isYouTubeMap ? ({ gl }) => gl.setClearColor(0x000000, 0) : undefined
@@ -2199,6 +2204,7 @@ export const MapView = (props: {
 
   return mapImage || mapVideo ? (
     <MapCanvasContainer>
+      <VersionBadge>v{APP_VERSION}</VersionBadge>
       {canvasContent}
       {isAnimatedMedia && (
         <AnimationToggleButton
