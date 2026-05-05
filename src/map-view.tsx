@@ -1262,12 +1262,7 @@ void main() {
 }
 `;
 
-const fogFragmentShader = `
-uniform sampler2D uFogTexture;
-uniform float uTime;
-uniform float uOpacity;
-varying vec2 vUv;
-
+const fogSharedGlsl = `
 vec2 hash2(vec2 p) {
   p = vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3)));
   return -1.0 + 2.0 * fract(sin(p) * 43758.5453123);
@@ -1297,22 +1292,53 @@ float fbm(vec2 p) {
   }
   return value;
 }
+`;
+
+// Player shader: animated smoke + UV distortion for organic fog edges
+const fogFragmentShader = `
+uniform sampler2D uFogTexture;
+uniform float uTime;
+uniform float uOpacity;
+varying vec2 vUv;
+
+${fogSharedGlsl}
 
 void main() {
-  vec4 fogSample = texture2D(uFogTexture, vUv);
-  float fogMask = fogSample.a;
-  if (fogMask < 0.05) discard;
-
-  vec2 p = vUv * 3.0;
   float t = uTime * 0.08;
 
-  float n1 = fbm(p + vec2(t, t * 0.7));
-  float n2 = fbm(p + vec2(n1 * 1.5, n1 * 1.5) + vec2(t * 0.4, -t * 0.25));
-  float smoke = fbm(p + vec2(n2 * 1.2));
-  smoke = smoke * 0.5 + 0.5;
+  // Distort the UV used to sample the fog mask → organic, non-rectangular edges
+  vec2 edgeWarp = vec2(
+    fbm(vUv * 6.0 + vec2(t * 0.25, t * 0.15)),
+    fbm(vUv * 6.0 + vec2(t * 0.15, -t * 0.2) + vec2(5.2, 1.3))
+  ) * 0.025;
+  float fogMask = texture2D(uFogTexture, clamp(vUv + edgeWarp, 0.001, 0.999)).a;
 
-  float grey = mix(0.2, 0.72, smoke);
-  gl_FragColor = vec4(grey, grey, grey, fogMask * uOpacity);
+  // Soft gradient at boundaries instead of a hard cutoff
+  float softEdge = smoothstep(0.04, 0.38, fogMask);
+  if (softEdge < 0.004) discard;
+
+  // Domain-warped smoke texture for the fog interior
+  vec2 p = vUv * 3.0;
+  float n1 = fbm(p + vec2(t, t * 0.7));
+  float n2 = fbm(p + vec2(n1 * 2.2, n1 * 2.2) + vec2(t * 0.4, -t * 0.25));
+  float smoke = fbm(p + vec2(n2 * 1.8)) * 0.5 + 0.5;
+
+  float grey = mix(0.08, 0.82, smoke);
+  gl_FragColor = vec4(grey, grey, grey, softEdge * uOpacity);
+}
+`;
+
+// DM shader: no animation, soft edge only (preserves painting precision)
+const fogDMFragmentShader = `
+uniform sampler2D uFogTexture;
+uniform float uOpacity;
+varying vec2 vUv;
+
+void main() {
+  float fogMask = texture2D(uFogTexture, vUv).a;
+  float softEdge = smoothstep(0.02, 0.12, fogMask);
+  if (softEdge < 0.004) discard;
+  gl_FragColor = vec4(0.08, 0.08, 0.12, softEdge * uOpacity);
 }
 `;
 
@@ -1356,6 +1382,44 @@ const FogAnimatedRenderer = (props: {
   );
 };
 
+const FogDMRenderer = (props: {
+  width: number;
+  height: number;
+  fogOpacity: number;
+  fogTexture: THREE.Texture;
+}) => {
+  const [material] = React.useState(
+    () =>
+      new THREE.ShaderMaterial({
+        uniforms: {
+          uFogTexture: { value: props.fogTexture },
+          uOpacity: { value: props.fogOpacity },
+        },
+        vertexShader: fogVertexShader,
+        fragmentShader: fogDMFragmentShader,
+        transparent: true,
+      })
+  );
+
+  React.useEffect(() => {
+    material.uniforms.uFogTexture.value = props.fogTexture;
+  }, [material, props.fogTexture]);
+
+  useFrame(() => {
+    material.uniforms.uOpacity.value = props.fogOpacity;
+  });
+
+  return (
+    <mesh renderOrder={LayerRenderOrder.fog}>
+      <planeBufferGeometry
+        attach="geometry"
+        args={[props.width, props.height]}
+      />
+      <primitive object={material} attach="material" />
+    </mesh>
+  );
+};
+
 const FogRenderer = React.memo(
   (props: {
     width: number;
@@ -1369,20 +1433,7 @@ const FogRenderer = React.memo(
       return <FogAnimatedRenderer {...props} />;
     }
 
-    return (
-      <mesh renderOrder={LayerRenderOrder.fog}>
-        <planeBufferGeometry
-          attach="geometry"
-          args={[props.width, props.height]}
-        />
-        <meshBasicMaterial
-          attach="material"
-          map={props.fogTexture}
-          transparent={true}
-          opacity={props.fogOpacity}
-        />
-      </mesh>
-    );
+    return <FogDMRenderer {...props} />;
   }
 );
 
