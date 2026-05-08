@@ -20,6 +20,8 @@
 ### Haute priorité
 
 - [ ] **Effets de zone** — feu, explosion, foudre, eau (Three.js, persistants DB, mutations `mapEffectAdd/Remove`)
+- [ ] **Sceau magique au sol** — rune / cercle magique persistant sur la carte, dessiné par le DM, couleur + intensité configurable, rendu Three.js (ShaderMaterial ou sprite animé)
+- [ ] **Zones météo exclues** — le DM délimite des polygones/rectangles sur la carte où la météo ne s'applique pas (intérieur, sous un toit) ; les particules pluie/neige sont clippées hors de ces zones
 - [ ] **Éclairage dynamique** — sources lumineuses DM, halo animé, radius + couleur, impact tokens
 - [ ] **Portes & Murs** — entités sur carte, état ouvert/fermé, bloquant la vision
 - [ ] **Docker Compose** — `docker-compose.yml` + `.env.example`, déploiement one-liner
