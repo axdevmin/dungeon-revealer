@@ -304,6 +304,29 @@ const GraphQLMapUpdateTitleInputType = t.inputObjectType({
   }),
 });
 
+const GraphQLMapUpdateDescriptionResultType =
+  t.objectType<lib.MapUpdateDescriptionResult>({
+    name: "MapUpdateDescriptionResult",
+    fields: () => [
+      t.field({
+        name: "updatedMap",
+        type: t.NonNull(GraphQLMapType),
+      }),
+    ],
+  });
+
+const GraphQLMapUpdateDescriptionInputType = t.inputObjectType({
+  name: "MapUpdateDescriptionInput",
+  fields: () => ({
+    mapId: {
+      type: t.NonNullInput(t.ID),
+    },
+    newDescription: {
+      type: t.NonNullInput(t.String),
+    },
+  }),
+});
+
 const GraphQLMapUpdateGridResultType = t.objectType<lib.MapUpdateGridResult>({
   name: "MapUpdateGridResult",
   fields: () => [
@@ -489,6 +512,16 @@ export const mutationFields = [
       RT.run(lib.mapUpdateTitle(input), context),
   }),
   t.field({
+    name: "mapUpdateDescription",
+    description: "Update the description of a map.",
+    type: t.NonNull(GraphQLMapUpdateDescriptionResultType),
+    args: {
+      input: t.arg(t.NonNullInput(GraphQLMapUpdateDescriptionInputType)),
+    },
+    resolve: (_, { input }, context) =>
+      RT.run(lib.mapUpdateDescription(input), context),
+  }),
+  t.field({
     name: "mapUpdateGrid",
     description: "Update the grid of a map.",
     type: t.NonNull(GraphQLMapUpdateGridResultType),
@@ -649,6 +682,11 @@ const GraphQLMapType = t.objectType<MapEntity>({
     t.field({
       name: "title",
       description: "The title of the map.",
+      type: t.NonNull(t.String),
+    }),
+    t.field({
+      name: "description",
+      description: "The description/notes of the map.",
       type: t.NonNull(t.String),
     }),
     t.field({

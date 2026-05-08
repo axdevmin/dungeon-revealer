@@ -293,6 +293,11 @@ type Map {
   title: String!
 
   """
+  The description/notes of the map.
+  """
+  description: String!
+
+  """
   The URL of the map image.
   """
   mapImageUrl: String!
@@ -445,6 +450,13 @@ type Mutation {
   Update the title of a map.
   """
   mapUpdateTitle(input: MapUpdateTitleInput!): MapUpdateTitleResult!
+
+  """
+  Update the description of a map.
+  """
+  mapUpdateDescription(
+    input: MapUpdateDescriptionInput!
+  ): MapUpdateDescriptionResult!
 
   """
   Update the grid of a map.
@@ -755,6 +767,15 @@ type MapUpdateTitleResult {
 input MapUpdateTitleInput {
   mapId: ID!
   newTitle: String!
+}
+
+type MapUpdateDescriptionResult {
+  updatedMap: Map!
+}
+
+input MapUpdateDescriptionInput {
+  mapId: ID!
+  newDescription: String!
 }
 
 type MapUpdateGridResult {

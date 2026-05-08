@@ -38,7 +38,7 @@ const main = async () => {
   let component = null;
   try {
     switch (pathname) {
-      case "/dm": {
+      case "/mj": {
         const { DmArea } = await import("./dm-area/dm-area");
         component = <DmArea />;
         break;

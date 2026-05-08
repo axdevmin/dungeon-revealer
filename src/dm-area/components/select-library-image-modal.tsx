@@ -13,7 +13,7 @@ import { useInvokeOnScrollEnd } from "../../hooks/use-invoke-on-scroll-end";
 const Content = styled.div`
   width: 90vw;
   height: 90vh;
-  background-color: #fff;
+  background-color: #0d0f14;
   border-radius: 5px;
   display: flex;
   flex-direction: column;
@@ -32,7 +32,8 @@ const ListItem = styled.button<{ isActive: boolean }>`
   text-align: center;
   margin-bottom: 16px;
 
-  background-color: ${(p) => (p.isActive ? darken(0.1, "#fff") : "#fff")};
+  background-color: ${(p) =>
+    p.isActive ? "rgba(96,165,250,0.12)" : "transparent"};
   font-weight: ${(p) => (p.isActive ? "bold" : "inherit")};
 `;
 

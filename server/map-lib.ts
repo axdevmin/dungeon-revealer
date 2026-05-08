@@ -299,6 +299,32 @@ export const mapUpdateTitle = (params: { mapId: string; newTitle: string }) =>
     RT.map((updatedMap): MapUpdateTitleResult => ({ updatedMap }))
   );
 
+export type MapUpdateDescriptionResult = {
+  updatedMap: MapEntity;
+};
+
+export const mapUpdateDescription = (params: {
+  mapId: string;
+  newDescription: string;
+}) =>
+  pipe(
+    auth.requireAdmin(),
+    RT.chainW(() => RT.ask<MapsDependency>()),
+    RT.chain(
+      (deps) => () => () =>
+        deps.maps.updateMapSettings(params.mapId, {
+          description: params.newDescription,
+        })
+    ),
+    RT.chainW((map) =>
+      pipe(
+        invalidateResourcesRT([`Map:${map.id}`]),
+        RT.map(() => map)
+      )
+    ),
+    RT.map((updatedMap): MapUpdateDescriptionResult => ({ updatedMap }))
+  );
+
 export type MapUpdateGridResult = {
   updatedMap: MapEntity;
 };

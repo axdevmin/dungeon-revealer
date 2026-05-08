@@ -609,9 +609,9 @@ const DropZone = (props: DropZoneProps): React.ReactElement => {
   return (
     <Box
       padding="2"
-      background="white"
+      background="rgba(13,15,20,0.85)"
       borderRadius="10px"
-      outline="2px dashed black"
+      outline="2px dashed rgba(96,165,250,0.5)"
       outlineOffset="-10px"
       onDragEnter={props.onDragEnter}
       onDragOver={props.onDragOver}

@@ -1,127 +1,73 @@
-# Navis — Roadmap & État des Features
+# Navis — Roadmap
 
-> **Audit du 2026-05-05**
-
----
-
-## 🗂️ Situation des branches
-
-| Branch                          | État                                                            |
-| ------------------------------- | --------------------------------------------------------------- |
-| `master` / `feature/update-fog` | Météo ✅ · Fog de base · Pas d'effets                           |
-| `feature/météo`                 | Météo ✅ · Fog organique ✅ · Effets de zone ✅ · Fixes sécu ✅ |
-
-**Action recommandée** : merger `feature/météo` → `master` pour consolider.
+> Dernière mise à jour : 2026-05-06
 
 ---
 
-## ✅ Implémenté sur `master`
+## ✅ Fait
 
-### Système Météo
-
-- **Types** : `none`, `rain`, `storm`, `snow`, `sun`
-- **Configurable** : intensité (0–1) + angle du vent (−60° à +60°)
-- **Rendus Three.js**
-  - Pluie : 1 500 particules avec gravité
-  - Orage : 3 000 particules + éclairs aléatoires
-  - Neige : 600 particules avec drift horizontal
-  - Soleil : overlay jaune pulsant
-- **GraphQL** : mutation `mapUpdateWeather`
-- **Sync temps réel** : DM → joueurs via live query
-- **UI DM** : bouton toolbar + panneau Chakra (slider intensité, angle)
+- **Météo** — pluie, orage, neige, soleil. Intensité + angle vent. Sync DM→joueurs via GraphQL live.
+- **Brouillard de guerre organique** — shader GLSL avec FBM + domain warping. Vue DM et joueurs séparées.
+- **UI transparente unifiée** — glassmorphism (backdrop-filter blur) sur tous les toolbars DM et joueur, boutons chat. Prop `transparent` dans `Toolbar`. Badge version masqué côté joueur.
+- **Toolbar joueur rétractable** — chevron indicateur, clic sur logo, drag & drop.
+- **Simplification UI joueur** — suppression Notes et Recherche (DM uniquement). Recherche masquée côté joueur via `useViewerRole()`.
+- **Sécurité** — express, socket.io, vite 8, Node 20 LTS. Vulnérabilités : 47 → 13 (−72%).
 
 ---
 
-## ✅ Implémenté sur `feature/météo` (à merger)
-
-### Brouillard de Guerre Organique
-
-- Shader GLSL avec Fractal Brownian Motion (fbm)
-- Distortion UV `edgeWarp * 0.025` pour contours sinueux
-- `smoothstep(0.04, 0.38, fogMask)` — transition douce, non uniforme
-- Rendu DM : `FogDMRenderer` sans distortion (contours nets)
-- Rendu joueurs : `FogAnimatedRenderer` avec distortion (immersion)
-
-### Effets de Zone Persistants
-
-- **Types** : feu, explosion, foudre, eau
-- **Stockage** : `effects[]` dans `MapEntity` (GraphQL + schema + SQLite)
-- **Rendus Three.js**
-  - Feu : 120 particules orange/jaune, drift vertical + flicker
-  - Explosion : scorch mark noir + ring pulsant + smoke grise
-  - Foudre : bolt aléatoire + glow bleu, flash timer (`useMemo` stable)
-  - Eau : 3 ripple rings + base fill bleu
-  - `RemoveHandle` rouge (DM only) — suppression au clic
-- **Outil DM** (`EffectMarkerMapTool`) : sélecteur type, slider rayon, preview ring
-- **GraphQL** : `mapEffectAdd` / `mapEffectRemove`
-- **Error boundary** : `EffectErrorBoundary` autour de chaque `SingleEffect`
-- **Bug fix** : `MapEffectsRenderer` et `WeatherSystem` placés dans `SharedMapState.Provider`
-
-### Sécurité & Dépendances
-
-- express 4.17 → 4.22.1
-- socket.io 4.4 → 4.8.3 (CRITICAL: socket.io-parser fix)
-- sanitize-html 2.5 → 2.17.3
-- sqlite 4 → 5 + sqlite3 5 → 6.0.1
-- Patch engine.io : `import { type X }` → `import type { X }` (compat TS 4.4)
-- Vulnérabilités réduites de 47 → 20
-
----
-
-## 📋 Backlog
+## 📋 Todo
 
 ### Haute priorité
 
-- [ ] **Merger `feature/météo` → `master`** — consolide 4 features majeures déjà prêtes
-- [ ] **Portes / Murs interactifs** — entités placées par le DM, état ouvert/fermé, bloquant la visibilité
-- [ ] **Éclairage dynamique** — sources lumineuses avec halo animé Three.js, radius configurable
-- [ ] **Docker Compose** — `docker-compose.yml` + `.env.example` pour déploiement one-liner
+- [ ] **Effets de zone** — feu, explosion, foudre, eau (Three.js, persistants DB, mutations `mapEffectAdd/Remove`)
+- [ ] **Éclairage dynamique** — sources lumineuses DM, halo animé, radius + couleur, impact tokens
+- [ ] **Portes & Murs** — entités sur carte, état ouvert/fermé, bloquant la vision
+- [ ] **Docker Compose** — `docker-compose.yml` + `.env.example`, déploiement one-liner
+- [ ] **CI pipeline** — GitHub Actions : lint + tests + build Docker sur chaque PR
 
 ### Moyenne priorité
 
-- [ ] **Tokens enrichis** — portrait, classe, barre de vie, visibles joueurs si autorisé
-- [ ] **Ping / Pointer amélioré** — curseur animé visible de tous + affichage nom du joueur (ping basique existe dans `dm-map.tsx`)
-- [ ] **Dialogue bubbles** — bulle de texte au-dessus d'un token, durée configurable
-- [ ] **Cadavres** — état `dead` sur un token : token grisé, icône tête de mort, reste sur la carte
+- [ ] **Tokens enrichis** — portrait, classe, barre de vie configurable par le DM
+- [ ] **État mort** — token grisé + icône, reste visible, filtrable
+- [ ] **Dialogue bubbles** — bulle texte au-dessus d'un token, durée configurable
+- [ ] **Ping amélioré** — curseur animé avec nom du joueur (ping basique dans `dm-map.tsx`)
 
-### Basse priorité / Nice-to-have
+### Basse priorité
 
-- [ ] **Indicateurs sonores** — icône source sonore placée sur la carte (ambiance)
-- [ ] **GitHub Kanban** — issues + project board pour ce backlog
-- [ ] **CI pipeline** — restore tests + lint automatique sur PR
-- [ ] **Hosting docs** — guide déploiement (Heroku, VPS, Fly.io)
+- [ ] **Sons d'ambiance** — bibliothèque de sons intégrés (taverne, forêt, grotte…), sélection par scène, lecture en boucle avec volume réglable, possibilité d'ajouter des fichiers audio personnalisés (upload DM)
+- [ ] **Indicateurs sonores** — icône source sonore sur la carte (ambiance, musique de zone)
+- [ ] **Hosting docs** — guide déploiement VPS / Fly.io / Railway
+- [ ] **GitHub Kanban** — issues + project board
 
 ---
 
 ## 🔒 Dettes techniques
 
-| Problème                                | Impact                     | Effort                       |
-| --------------------------------------- | -------------------------- | ---------------------------- |
-| `vite@2` (→ v8 requis)                  | Dev only — prod build safe | Moyen (config + plugins)     |
-| `relay-compiler@10` (→ v20)             | Build-time only            | Élevé (API + schema)         |
-| Node 16 dans Dockerfile (EOL sept 2023) | Sécurité prod              | Faible (changer FROM)        |
-| React 17 (React 18 dispo)               | Perf + Concurrent Mode     | Élevé (breaking changes r3f) |
+| Problème                          | Impact     | Notes                                           |
+| --------------------------------- | ---------- | ----------------------------------------------- |
+| `immutable@3` (relay-compiler@10) | Build only | Bloqué — nécessite migration relay complète     |
+| `relay-compiler@10` → v13+        | Build only | Migration majeure (TypeScript natif, types)     |
+| React 17 → 18                     | Perf       | Breaking: react-three-fiber v5→v8, Chakra v1→v3 |
+| Three.js 0.126 → 0.184            | Perf + API | 58 versions, nombreuses API dépréciées          |
+| `react-showdown` MODERATE         | Dev only   | Aucun fix upstream                              |
+
+**Vulnérabilités restantes : 13** — HIGH×2 (immutable@3, dev uniquement) · MODERATE×2 (showdown ReDoS) · LOW×9 (jest@27, morgan)
 
 ---
 
-## 📝 Architecture
+## 🏗 Architecture
 
-- **Relay + GraphQL** : live queries via `invalidateResourcesRT()`
-- **react-three-fiber v5** : Canvas isolé, `ContextBridge` pour propagation de context
-- **Three.js** : `DynamicDrawUsage` + `needsUpdate` pour particle systems
-- **GLSL shaders** : fog shader avec `noise2D` + fbm
-- **SQLite3 6** + migrations versionnées (`server/migrations/`)
-- **DB schema actuel** : `maps`, `notes`, `tokenImages` (4 migrations)
-
-### Commandes
+- **Relay + GraphQL** live queries via `invalidateResourcesRT()`
+- **react-three-fiber v5** — Canvas isolé, `ContextBridge`
+- **Three.js 0.126** — `DynamicDrawUsage` + particle systems
+- **GLSL** — fog avec `noise2D` + fbm + domain warping
+- **SQLite3 6** + 4 migrations versionnées (`server/migrations/`)
+- **patch-package** — patches engine.io, react-spring/three, relay-compiler, use-sound
 
 ```bash
 npm install
 npm run setup                 # write-schema + relay-compiler
 npm run start:server:dev      # port 3000
 npm run start:frontend:dev    # port 4000
+npm run build
 ```
-
----
-
-**Last updated** : 2026-05-05

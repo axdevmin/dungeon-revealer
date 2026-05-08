@@ -1,28 +1,115 @@
 import * as React from "react";
 import styled from "@emotion/styled/macro";
-import { Input } from "@chakra-ui/react";
-import * as Button from "./button";
 import { BackgroundImageContainer } from "./background-image-container";
 import { BrandLogoText } from "./brand-logo-text";
-import { Modal, ModalDialogSize } from "./modal";
+import { ds } from "./design-system";
 
-const ButtonContainer = styled.div`
-  margin-top: 16px;
+const Form = styled.form`
   display: flex;
+  flex-direction: column;
+  gap: 12px;
 `;
 
-const ButtonColumn = styled.div`
-  margin-left: auto;
-  margin-right: 0;
+const InputField = styled.input`
+  width: 100%;
+  height: 44px;
+  padding: 0 16px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid ${ds.colors.borderStrong};
+  border-radius: ${ds.radii.md};
+  color: ${ds.colors.textPrimary};
+  font-family: ${ds.font.sans};
+  font-size: 14px;
+  outline: none;
+  transition: all ${ds.transitions.fast};
+
+  &::placeholder {
+    color: ${ds.colors.textMuted};
+  }
+
+  &:focus {
+    border-color: ${ds.colors.accent};
+    background: rgba(96, 165, 250, 0.06);
+    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.12);
+  }
 `;
 
-const Link = styled.a`
+const SubmitButton = styled.button`
+  width: 100%;
+  height: 44px;
+  background: ${ds.colors.accent};
+  color: #fff;
+  border: none;
+  border-radius: ${ds.radii.md};
+  font-family: ${ds.font.sans};
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all ${ds.transitions.fast};
+  letter-spacing: 0.01em;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(96, 165, 250, 0.2);
+
+  &:hover {
+    background: ${ds.colors.accentHover};
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(96, 165, 250, 0.35),
+      0 0 0 1px rgba(96, 165, 250, 0.4);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+`;
+
+const ErrorBox = styled.div`
+  background: ${ds.colors.dangerMuted};
+  border: 1px solid rgba(220, 74, 74, 0.3);
+  border-radius: ${ds.radii.md};
+  padding: 12px 16px;
+  color: #f87171;
+  font-size: 13px;
+  font-family: ${ds.font.sans};
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`;
+
+const SwitchLink = styled.a`
   display: block;
-  text-align: right;
-  margin-top: 64px;
-  color: white;
-  font-family: folkard, cardinal, palitino, serif;
-  font-size: 150%;
+  text-align: center;
+  margin-top: 24px;
+  color: ${ds.colors.textMuted};
+  font-family: ${ds.font.sans};
+  font-size: 12px;
+  text-decoration: none;
+  transition: color ${ds.transitions.fast};
+  letter-spacing: 0.02em;
+
+  &:hover {
+    color: ${ds.colors.accent};
+  }
+`;
+
+const RoleBadge = styled.div`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: ${ds.colors.accentMuted};
+  border: 1px solid ${ds.colors.accentBorder};
+  border-radius: ${ds.radii.full};
+  padding: 4px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  color: ${ds.colors.accent};
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-family: ${ds.font.sans};
+  margin: 0 auto 24px;
+`;
+
+const BadgeWrapper = styled.div`
+  display: flex;
+  justify-content: center;
 `;
 
 export const AuthenticationScreen: React.FC<{
@@ -32,69 +119,59 @@ export const AuthenticationScreen: React.FC<{
 }> = ({ onAuthenticate, requiredRole = "DM", fetch }) => {
   const [password, setPassword] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
+  const [isLoading, setIsLoading] = React.useState(false);
+
   return (
     <BackgroundImageContainer>
       <BrandLogoText />
-      <form
+      <BadgeWrapper>
+        <RoleBadge>
+          {requiredRole === "DM" ? "Maître du Jeu" : "Joueur"}
+        </RoleBadge>
+      </BadgeWrapper>
+      <Form
         onSubmit={async (ev) => {
           ev.preventDefault();
           setError(null);
-          const result = await fetch("/auth", {
-            headers: {
-              Authorization: `Bearer ${password}`,
-            },
-          }).then((res) => res.json());
-          if (result.data.role === requiredRole || result.data.role === "DM") {
-            onAuthenticate(password);
-          } else {
-            setError("Mot de passe invalide !");
+          setIsLoading(true);
+          try {
+            const result = await fetch("/auth", {
+              headers: {
+                Authorization: `Bearer ${password}`,
+              },
+            }).then((res) => res.json());
+            if (
+              result.data.role === requiredRole ||
+              result.data.role === "DM"
+            ) {
+              onAuthenticate(password);
+            } else {
+              setError("Mot de passe invalide. Veuillez réessayer.");
+            }
+          } catch {
+            setError("Impossible de se connecter. Vérifiez votre réseau.");
+          } finally {
+            setIsLoading(false);
           }
         }}
       >
-        <Input
-          background="white"
+        <InputField
+          type="password"
           placeholder={`Mot de passe ${
             requiredRole === "DM" ? "MJ" : "joueur"
           }`}
           value={password}
           onChange={(ev) => setPassword(ev.target.value)}
+          autoFocus
         />
-        <ButtonContainer>
-          <ButtonColumn>
-            <Button.Primary type="submit">Connexion</Button.Primary>
-          </ButtonColumn>
-        </ButtonContainer>
-        <div>
-          {requiredRole === "DM" ? (
-            <Link href="/">Section joueurs{" >"}</Link>
-          ) : (
-            <Link href="/dm">Section MJ{" >"}</Link>
-          )}
-        </div>
-      </form>
-
-      {error ? (
-        <Modal onPressEscape={() => undefined}>
-          <Modal.Dialog size={ModalDialogSize.SMALL}>
-            <Modal.Header>
-              <h3>Mot de passe invalide</h3>
-            </Modal.Header>
-            <Modal.Body>
-              Le mot de passe saisi est incorrect. Veuillez réessayer.{" "}
-              <ButtonContainer>
-                <ButtonColumn
-                  onClick={() => {
-                    setError(null);
-                    setPassword("");
-                  }}
-                >
-                  <Button.Primary>Réessayer.</Button.Primary>
-                </ButtonColumn>
-              </ButtonContainer>
-            </Modal.Body>
-          </Modal.Dialog>
-        </Modal>
-      ) : null}
+        {error ? <ErrorBox>⚠ {error}</ErrorBox> : null}
+        <SubmitButton type="submit" disabled={isLoading}>
+          {isLoading ? "Connexion..." : "Se connecter"}
+        </SubmitButton>
+      </Form>
+      <SwitchLink href={requiredRole === "DM" ? "/" : "/dm"}>
+        {requiredRole === "DM" ? "→ Section joueurs" : "→ Section MJ"}
+      </SwitchLink>
     </BackgroundImageContainer>
   );
 };

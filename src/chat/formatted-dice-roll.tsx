@@ -7,9 +7,9 @@ const StyledDiceRoll = styled.span`
 `;
 
 const Wrapper = styled.span`
-  background: white;
+  background: rgba(96, 165, 250, 0.1);
   border-radius: 3px;
-  border: 1px solid #d1d1d1;
+  border: 1px solid rgba(96, 165, 250, 0.3);
   padding-left: 4px;
   padding-top: 2px;
   padding-bottom: 2px;

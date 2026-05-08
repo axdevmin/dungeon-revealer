@@ -2,7 +2,6 @@ import * as React from "react";
 import graphql from "babel-plugin-relay/macro";
 import { useQuery, useSubscription } from "relay-hooks";
 import { ConnectionHandler } from "relay-runtime";
-import { Stack } from "@chakra-ui/react";
 import { ChatUserList } from "./chat-user-list";
 import { ChatMessages } from "./chat-messages";
 import { ChatSettings } from "./chat-settings";
@@ -10,12 +9,10 @@ import { chatSubscription } from "./__generated__/chatSubscription.graphql";
 import { chatQuery } from "./__generated__/chatQuery.graphql";
 import * as Button from "../button";
 import * as HorizontalNavigation from "../horizontal-navigation";
-
 import * as Icon from "../feather-icons";
 import useSound from "use-sound";
 import diceRollSound from "./dice-roll.mp3";
 import notificationSound from "./notification.mp3";
-
 import styled from "@emotion/styled/macro";
 import { ChatTextArea } from "./chat-textarea";
 import { chatUserUpdateSubscription } from "./__generated__/chatUserUpdateSubscription.graphql";
@@ -24,6 +21,7 @@ import { isAbstractGraphQLMemberType } from "../relay-utilities";
 import { chatMessageSoundSubscription } from "./__generated__/chatMessageSoundSubscription.graphql";
 import { useSoundSettings } from "../sound-settings";
 import { useStaticRef } from "../hooks/use-static-ref";
+import { ds } from "../design-system";
 
 const AppSubscription = graphql`
   subscription chatSubscription {
@@ -90,12 +88,82 @@ const ChatQuery = graphql`
 `;
 
 const ChatWindow = styled.div`
-  padding: 12px;
-  background-color: #fff;
-  font-size: 12px;
+  background: ${ds.colors.surface};
+  font-size: 13px;
   height: 100%;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+`;
+
+const ChatHeader = styled.div`
+  display: flex;
+  flex-direction: column;
+  padding: 12px 12px 0;
+  gap: 8px;
+  border-bottom: 1px solid ${ds.colors.border};
+  flex-shrink: 0;
+`;
+
+const ChatHeaderTitle = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+`;
+
+const ChatTitle = styled.span`
+  font-size: 12px;
+  font-weight: 600;
+  color: ${ds.colors.textSecondary};
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-family: ${ds.font.sans};
+`;
+
+const ChatBody = styled.div`
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+  padding: 0;
+`;
+
+const ChatFooter = styled.div`
+  border-top: 1px solid ${ds.colors.border};
+  padding: 10px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+`;
+
+const DiceButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: transparent;
+  border: none;
+  color: ${ds.colors.textMuted};
+  font-size: 11px;
+  font-family: ${ds.font.sans};
+  font-weight: 500;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: ${ds.radii.sm};
+  transition: all ${ds.transitions.fast};
+  letter-spacing: 0.02em;
+
+  svg {
+    stroke: ${ds.colors.textMuted};
+  }
+
+  &:hover {
+    color: ${ds.colors.accent};
+    background: ${ds.colors.accentMuted};
+    svg {
+      stroke: ${ds.colors.accent};
+    }
+  }
 `;
 
 export const useChatSoundsAndUnreadCount = (
@@ -218,7 +286,6 @@ export const Chat: React.FC<{
 
         if (!users || !updateRecord) return;
 
-        // see https://github.com/relay-tools/relay-compiler-language-typescript/issues/186
         if (isAbstractGraphQLMemberType(updateRecord, "UserAddUpdate")) {
           const edge = ConnectionHandler.createEdge(
             store,
@@ -257,58 +324,64 @@ export const Chat: React.FC<{
         ev.stopPropagation();
       }}
     >
-      <HorizontalNavigation.Group>
-        <HorizontalNavigation.Button
-          small
-          isActive={mode === "chat"}
-          fullWidth
-          onClick={() => setMode("chat")}
-        >
-          <Icon.MessageCircle boxSize="12px" />
-          <span>Chat</span>
-        </HorizontalNavigation.Button>
-        <HorizontalNavigation.Button
-          small
-          isActive={mode === "user"}
-          fullWidth
-          onClick={() => setMode("user")}
-        >
-          <Icon.Users boxSize="12px" />
-          <span>
-            Joueurs (<ChatOnlineUserIndicator data={data} />)
-          </span>
-        </HorizontalNavigation.Button>
-        <HorizontalNavigation.Button
-          small
-          isActive={mode === "settings"}
-          fullWidth
-          onClick={() => setMode("settings")}
-        >
-          <Icon.Settings boxSize="12px" />
-          <span>Paramètres</span>
-        </HorizontalNavigation.Button>
-      </HorizontalNavigation.Group>
-      <div style={{ height: 8 }} />
-      {mode === "chat" ? (
-        <Stack height="100%">
-          <ChatMessages chat={data} />
-          <ChatTextArea />
-          <Button.Tertiary
+      <ChatHeader>
+        <ChatHeaderTitle>
+          <ChatTitle>Canal de communication</ChatTitle>
+        </ChatHeaderTitle>
+        <HorizontalNavigation.Group>
+          <HorizontalNavigation.Button
             small
-            onClick={toggleShowDiceRollNotes}
-            style={{ marginTop: 8 }}
+            isActive={mode === "chat"}
+            fullWidth
+            onClick={() => setMode("chat")}
           >
-            <Icon.Dice boxSize="16px" /> <span> Notes de dés</span>
-          </Button.Tertiary>
-        </Stack>
+            <Icon.MessageCircle boxSize="12px" />
+            <span>Chat</span>
+          </HorizontalNavigation.Button>
+          <HorizontalNavigation.Button
+            small
+            isActive={mode === "user"}
+            fullWidth
+            onClick={() => setMode("user")}
+          >
+            <Icon.Users boxSize="12px" />
+            <span>
+              Joueurs (<ChatOnlineUserIndicator data={data} />)
+            </span>
+          </HorizontalNavigation.Button>
+          <HorizontalNavigation.Button
+            small
+            isActive={mode === "settings"}
+            fullWidth
+            onClick={() => setMode("settings")}
+          >
+            <Icon.Settings boxSize="12px" />
+            <span>Config</span>
+          </HorizontalNavigation.Button>
+        </HorizontalNavigation.Group>
+      </ChatHeader>
+
+      {mode === "chat" ? (
+        <>
+          <ChatBody>
+            <ChatMessages chat={data} />
+          </ChatBody>
+          <ChatFooter>
+            <ChatTextArea />
+            <DiceButton onClick={toggleShowDiceRollNotes}>
+              <Icon.Dice boxSize="12px" />
+              <span>Notes de dés</span>
+            </DiceButton>
+          </ChatFooter>
+        </>
       ) : mode === "user" ? (
-        <div style={{ marginTop: 16 }}>
+        <ChatBody style={{ padding: "12px" }}>
           <ChatUserList data={data} />
-        </div>
+        </ChatBody>
       ) : mode === "settings" ? (
-        <div style={{ marginTop: 16 }}>
+        <ChatBody style={{ padding: "12px" }}>
           <ChatSettings data={data.me} />
-        </div>
+        </ChatBody>
       ) : null}
     </ChatWindow>
   );

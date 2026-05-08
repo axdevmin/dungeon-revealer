@@ -5,33 +5,53 @@ import { useDrag, useGesture } from "react-use-gesture";
 import { Tooltip } from "@chakra-ui/react";
 import * as Icon from "./feather-icons";
 import * as Button from "./button";
+import { ds } from "./design-system";
 
 const WindowContainer = styled(animated.div)<{ isSideBarVisible: boolean }>`
   position: absolute;
-  box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
-  border-radius: 8px;
-  background: white;
-  position: absolute;
+  box-shadow: ${ds.shadows.lg};
+  border-radius: ${ds.radii.lg};
+  background: ${ds.colors.surface};
+  border: 1px solid ${ds.colors.borderStrong};
   z-index: 100;
   user-select: text;
+  overflow: hidden;
   border-top-left-radius: ${(props) => (props.isSideBarVisible ? 0 : null)};
   border-bottom-left-radius: ${(props) => (props.isSideBarVisible ? 0 : null)};
 `;
 
 const WindowHeader = styled.div`
-  height: 50px;
+  height: 44px;
   display: flex;
-  padding: 8px 12px;
-  border-bottom: 1px solid lightgray;
+  padding: 0 10px 0 14px;
+  border-bottom: 1px solid ${ds.colors.border};
   cursor: grab;
   align-items: center;
   justify-content: flex-end;
+  background: ${ds.colors.surfaceHover};
+  gap: 4px;
+
+  &:active {
+    cursor: grabbing;
+  }
+`;
+
+const WindowHeaderTitle = styled.div`
+  font-weight: 600;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-right: auto;
+  color: ${ds.colors.textPrimary};
+  font-family: ${ds.font.sans};
 `;
 
 const WindowBody = styled(animated.div)`
   height: 400px;
   width: 100%;
   overflow: hidden;
+  background: ${ds.colors.surface};
 `;
 
 const WindowsResizeHandle = styled.button`
@@ -40,8 +60,26 @@ const WindowsResizeHandle = styled.button`
   bottom: 0;
   right: 0;
   cursor: nwse-resize;
-  height: 15px;
-  width: 15px;
+  height: 16px;
+  width: 16px;
+  opacity: 0.3;
+  transition: opacity ${ds.transitions.fast};
+
+  &::after {
+    content: "";
+    position: absolute;
+    bottom: 4px;
+    right: 4px;
+    width: 8px;
+    height: 8px;
+    border-right: 2px solid ${ds.colors.textMuted};
+    border-bottom: 2px solid ${ds.colors.textMuted};
+    border-radius: 1px;
+  }
+
+  &:hover {
+    opacity: 0.8;
+  }
 `;
 
 const WindowSideBar = styled.div`
@@ -50,10 +88,12 @@ const WindowSideBar = styled.div`
   transform: translateX(-249px);
   max-width: 250px;
   width: 100%;
-  background: white;
+  background: ${ds.colors.surface};
+  border: 1px solid ${ds.colors.border};
   height: 100%;
-  border-top-left-radius: 8px;
-  border-bottom-left-radius: 8px;
+  border-top-left-radius: ${ds.radii.lg};
+  border-bottom-left-radius: ${ds.radii.lg};
+  overflow: hidden;
 `;
 
 const hasButtonParent = (el: any) => {
@@ -62,7 +102,6 @@ const hasButtonParent = (el: any) => {
     isButton = el instanceof HTMLButtonElement;
     el = el?.parentNode ?? null;
   }
-
   return isButton;
 };
 
@@ -111,7 +150,6 @@ export const DraggableWindow = ({
     }
   });
 
-  // In case the component un-mounts before the drag finished we need to remove the use-select-disabled class from body
   const onUnmountRef = React.useRef<() => void>();
   React.useEffect(() => () => onUnmountRef.current?.(), []);
 
@@ -124,25 +162,21 @@ export const DraggableWindow = ({
       event,
       cancel,
     }) => {
-      // cancel dragging on buttons and inputs
       if (
         event.target instanceof HTMLInputElement ||
         hasButtonParent(event.target)
       ) {
         return cancel();
       }
-
       set({
         x: memo[0] + mx,
         y: memo[1] + my,
         immediate: true,
       });
-
       return memo;
     },
     onMouseDown: ({ event }) => {
       const headerElement = windowHeaderRef.current;
-      // on desktop we want to disable user-select while dragging
       if (
         headerElement &&
         event.target instanceof Node &&
@@ -193,23 +227,13 @@ export const DraggableWindow = ({
     >
       <WindowHeader {...bind()} ref={windowHeaderRef}>
         {headerLeftContent ? (
-          <div style={{ flexShrink: 0 }}>{headerLeftContent}</div>
+          <div style={{ flexShrink: 0, marginRight: 8 }}>
+            {headerLeftContent}
+          </div>
         ) : null}
-        <div
-          style={{
-            fontWeight: "bold",
-            whiteSpace: "nowrap",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            marginLeft: 4,
-            marginRight: 4,
-            width: "100%",
-          }}
-        >
-          {headerContent}
-        </div>
+        <WindowHeaderTitle>{headerContent}</WindowHeaderTitle>
         {options.map((option) => (
-          <div style={{ marginRight: 4 }} key={option.title}>
+          <div key={option.title}>
             <Tooltip label={option.title}>
               <Button.Tertiary
                 small
@@ -222,19 +246,11 @@ export const DraggableWindow = ({
             </Tooltip>
           </div>
         ))}
-        <div style={{ marginRight: 0 }}>
-          <Button.Tertiary small iconOnly onClick={close} title="Close">
-            <Icon.X boxSize="16px" />
-          </Button.Tertiary>
-        </div>
+        <Button.Tertiary small iconOnly onClick={close} title="Fermer">
+          <Icon.X boxSize="14px" />
+        </Button.Tertiary>
       </WindowHeader>
-      <WindowBody
-        style={{
-          height: props.height,
-        }}
-      >
-        {bodyContent}
-      </WindowBody>
+      <WindowBody style={{ height: props.height }}>{bodyContent}</WindowBody>
       <WindowsResizeHandle {...dimensionDragBind()} />
       {sideBarContent ? <WindowSideBar>{sideBarContent}</WindowSideBar> : null}
     </WindowContainer>

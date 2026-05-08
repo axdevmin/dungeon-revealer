@@ -1,21 +1,12 @@
 import * as React from "react";
 import graphql from "babel-plugin-relay/macro";
 import { useFragment, useMutation } from "relay-hooks";
-import {
-  VStack,
-  HStack,
-  Heading,
-  Slider,
-  SliderTrack,
-  SliderFilledTrack,
-  SliderThumb,
-  Text,
-  Box,
-} from "@chakra-ui/react";
+import styled from "@emotion/styled/macro";
 import { Toolbar } from "../toolbar";
 import type { WeatherType } from "../weather-types";
 import { weatherControls_MapFragment$key } from "./__generated__/weatherControls_MapFragment.graphql";
 import { weatherControls_mapUpdateWeatherMutation } from "./__generated__/weatherControls_mapUpdateWeatherMutation.graphql";
+import { ds } from "../design-system";
 
 const WeatherControlsMapFragment = graphql`
   fragment weatherControls_MapFragment on Map {
@@ -58,6 +49,85 @@ const WEATHER_OPTIONS: WeatherOption[] = [
   { type: "snow", label: "Neige", emoji: "❄️" },
 ];
 
+const Container = styled.div`
+  padding: 14px;
+  min-width: 240px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+`;
+
+const Title = styled.div`
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: ${ds.colors.textMuted};
+  font-family: ${ds.font.sans};
+`;
+
+const WeatherGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+`;
+
+const WeatherBtn = styled.button<{ isActive: boolean }>`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 10px 6px 8px;
+  border-radius: ${ds.radii.md};
+  border: 1px solid
+    ${(p) => (p.isActive ? ds.colors.accentBorder : ds.colors.border)};
+  background: ${(p) =>
+    p.isActive ? ds.colors.accentMuted : "rgba(255,255,255,0.03)"};
+  color: ${(p) => (p.isActive ? ds.colors.accent : ds.colors.textSecondary)};
+  cursor: pointer;
+  font-family: ${ds.font.sans};
+  font-size: 11px;
+  font-weight: ${(p) => (p.isActive ? "600" : "400")};
+  transition: all ${ds.transitions.fast};
+
+  span.emoji {
+    font-size: 18px;
+    line-height: 1;
+  }
+
+  &:hover {
+    background: ${ds.colors.surfaceHover};
+    border-color: ${ds.colors.borderStrong};
+    color: ${ds.colors.textPrimary};
+  }
+`;
+
+const SliderRow = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+`;
+
+const SliderLabel = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: ${ds.colors.textSecondary};
+  font-family: ${ds.font.sans};
+
+  span.value {
+    color: ${ds.colors.textMuted};
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+  }
+`;
+
+const SliderInput = styled.input`
+  width: 100%;
+`;
+
 export const WeatherControls = (props: {
   map: weatherControls_MapFragment$key;
 }): React.ReactElement => {
@@ -85,77 +155,66 @@ export const WeatherControls = (props: {
 
   return (
     <Toolbar.Popup>
-      <VStack minWidth="280px" padding="3" spacing="3" align="stretch">
-        <Heading size="xs">Météo</Heading>
+      <Container>
+        <Title>Météo</Title>
 
-        <HStack spacing="2" flexWrap="wrap">
+        <WeatherGrid>
           {WEATHER_OPTIONS.map((opt) => (
-            <Box
+            <WeatherBtn
               key={opt.type}
-              as="button"
-              px="3"
-              py="2"
-              borderRadius="md"
-              fontSize="sm"
-              fontWeight={weather.type === opt.type ? "bold" : "normal"}
-              bg={weather.type === opt.type ? "blue.600" : "gray.700"}
-              color="white"
-              _hover={{ bg: "blue.500" }}
+              isActive={weather.type === opt.type}
               onClick={() => apply({ type: opt.type })}
             >
-              {opt.emoji} {opt.label}
-            </Box>
+              <span className="emoji">{opt.emoji}</span>
+              <span>{opt.label}</span>
+            </WeatherBtn>
           ))}
-        </HStack>
+        </WeatherGrid>
 
         {weather.type !== "none" && (
           <>
-            <Box>
-              <HStack justifyContent="space-between" mb="1">
-                <Text fontSize="sm">Intensité</Text>
-                <Text fontSize="sm" color="gray.400">
+            <SliderRow>
+              <SliderLabel>
+                <span>Intensité</span>
+                <span className="value">
                   {Math.round(weather.intensity * 100)}%
-                </Text>
-              </HStack>
-              <Slider
+                </span>
+              </SliderLabel>
+              <SliderInput
+                type="range"
                 min={0}
                 max={1}
                 step={0.05}
                 value={weather.intensity}
-                onChange={(v) => apply({ intensity: v })}
-              >
-                <SliderTrack>
-                  <SliderFilledTrack />
-                </SliderTrack>
-                <SliderThumb />
-              </Slider>
-            </Box>
+                onChange={(e) =>
+                  apply({ intensity: parseFloat(e.target.value) })
+                }
+              />
+            </SliderRow>
 
             {weather.type !== "sun" && (
-              <Box>
-                <HStack justifyContent="space-between" mb="1">
-                  <Text fontSize="sm">Direction du vent</Text>
-                  <Text fontSize="sm" color="gray.400">
+              <SliderRow>
+                <SliderLabel>
+                  <span>Direction du vent</span>
+                  <span className="value">
                     {Math.round(weather.windAngle)}°
-                  </Text>
-                </HStack>
-                <Slider
+                  </span>
+                </SliderLabel>
+                <SliderInput
+                  type="range"
                   min={-60}
                   max={60}
                   step={5}
                   value={weather.windAngle}
-                  onChange={(v) => apply({ windAngle: v })}
-                >
-                  <SliderTrack>
-                    <SliderFilledTrack />
-                  </SliderTrack>
-                  <SliderThumb />
-                </Slider>
-              </Box>
+                  onChange={(e) =>
+                    apply({ windAngle: parseFloat(e.target.value) })
+                  }
+                />
+              </SliderRow>
             )}
           </>
         )}
-      </VStack>
+      </Container>
     </Toolbar.Popup>
   );
 };

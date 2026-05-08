@@ -2255,7 +2255,7 @@ export const MapView = (props: {
 
   return mapImage || mapVideo ? (
     <MapCanvasContainer>
-      <VersionBadge>v{APP_VERSION}</VersionBadge>
+      {isDungeonMaster ? <VersionBadge>v{APP_VERSION}</VersionBadge> : null}
       {canvasContent}
       {isAnimatedMedia && (
         <AnimationToggleButton

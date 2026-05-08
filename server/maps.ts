@@ -118,6 +118,7 @@ export const DEFAULT_WEATHER: WeatherSettings = {
 export type MapEntity = {
   id: string;
   title: string;
+  description: string;
   fogProgressPath: string | null;
   fogLivePath: string | null;
   mapPath: string;
@@ -175,6 +176,8 @@ export class Maps {
       const map: MapEntity = {
         id: rawMap.id,
         title: rawMap.title,
+        description:
+          "description" in rawMap ? (rawMap.description as string) ?? "" : "",
         mapPath: rawMap.mapPath,
         fogProgressPath: rawMap.fogProgressPath ?? null,
         fogLivePath: rawMap.fogLivePath ?? null,
@@ -237,6 +240,7 @@ export class Maps {
       const map: MapEntity = {
         id,
         title,
+        description: "",
         // automatically saved after interaction
         fogProgressPath: null,
         // progress becomes live when DM publishes map
@@ -277,6 +281,7 @@ export class Maps {
       const map: MapEntity = {
         id,
         title,
+        description: "",
         fogProgressPath: null,
         fogLivePath: null,
         mapPath: videoUrl,

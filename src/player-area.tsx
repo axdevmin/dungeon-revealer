@@ -22,23 +22,21 @@ import {
   FlatContextProvider,
 } from "./flat-context-provider";
 import { MarkAreaToolContext } from "./map-tools/mark-area-map-tool";
-import {
-  NoteWindowActionsContext,
-  useNoteWindowActions,
-} from "./dm-area/token-info-aside";
 import { playerArea_PlayerMap_ActiveMapQuery } from "./__generated__/playerArea_PlayerMap_ActiveMapQuery.graphql";
 import { playerArea_MapPingMutation } from "./__generated__/playerArea_MapPingMutation.graphql";
 import { UpdateTokenContext } from "./update-token-context";
 import { LazyLoadedMapView } from "./lazy-loaded-map-view";
 
-const ToolbarContainer = styled(animated.div)`
+const ToolbarContainer = styled.div`
   position: absolute;
   display: flex;
   justify-content: center;
   pointer-events: none;
   user-select: none;
-  top: 0;
-  left: 0;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
 `;
 
 const AbsoluteFullscreenContainer = styled.div`
@@ -189,13 +187,11 @@ const PlayerMap = ({
       },
     }
   );
-  const noteWindowActions = useNoteWindowActions();
   return (
     <>
       <div
         style={{
-          cursor: "grab",
-          background: "black",
+          background: "#0d0f14",
           height: "100vh",
         }}
       >
@@ -241,7 +237,6 @@ const PlayerMap = ({
                 controlRef={controlRef}
                 sharedContexts={[
                   MarkAreaToolContext,
-                  NoteWindowActionsContext,
                   ReactRelayContext,
                   UpdateTokenContext,
                 ]}
@@ -254,89 +249,80 @@ const PlayerMap = ({
       {!showSplashScreen ? (
         isMapOnly ? null : (
           <>
-            <ToolbarContainer
-              style={{
-                transform: to(
-                  [toolbarPosition.position],
-                  ([x, y]) => `translate(${x}px, ${y}px)`
-                ),
-              }}
-            >
-              <Toolbar horizontal>
-                <Toolbar.Logo {...handler()} cursor="grab" />
+            <ToolbarContainer style={{}}>
+              <Toolbar horizontal transparent>
+                <Toolbar.Logo {...handler()} cursor="grab">
+                  {showItems ? (
+                    <Icon.ChevronDown boxSize="18px" />
+                  ) : (
+                    <Icon.ChevronUp boxSize="18px" />
+                  )}
+                </Toolbar.Logo>
                 {showItems ? (
-                  <React.Fragment>
-                    <Toolbar.Group>
-                      <Toolbar.Item isActive>
-                        <Toolbar.Button
-                          onClick={() => {
-                            controlRef.current?.controls.center();
-                          }}
-                          onTouchStart={(ev) => {
-                            ev.preventDefault();
-                            controlRef.current?.controls.center();
-                          }}
-                        >
-                          <Icon.Compass boxSize="20px" />
-                          <Icon.Label>Centrer</Icon.Label>
-                        </Toolbar.Button>
-                      </Toolbar.Item>
-                      <Toolbar.Item isActive>
-                        <Toolbar.LongPressButton
-                          onClick={() => {
+                  <Toolbar.Group>
+                    <Toolbar.Item isActive>
+                      <Toolbar.Button
+                        onClick={() => {
+                          controlRef.current?.controls.center();
+                        }}
+                        onTouchStart={(ev) => {
+                          ev.preventDefault();
+                          controlRef.current?.controls.center();
+                        }}
+                      >
+                        <Icon.Compass boxSize="20px" />
+                        <Icon.Label>Centrer</Icon.Label>
+                      </Toolbar.Button>
+                    </Toolbar.Item>
+                    <Toolbar.Item isActive>
+                      <Toolbar.LongPressButton
+                        onClick={() => {
+                          controlRef.current?.controls.zoomIn();
+                        }}
+                        onLongPress={() => {
+                          const interval = setInterval(() => {
                             controlRef.current?.controls.zoomIn();
-                          }}
-                          onLongPress={() => {
-                            const interval = setInterval(() => {
-                              controlRef.current?.controls.zoomIn();
-                            }, 100);
-
-                            return () => clearInterval(interval);
-                          }}
-                        >
-                          <Icon.ZoomIn boxSize="20px" />
-                          <Icon.Label>Zoom +</Icon.Label>
-                        </Toolbar.LongPressButton>
-                      </Toolbar.Item>
-                      <Toolbar.Item isActive>
-                        <Toolbar.LongPressButton
-                          onClick={() => {
+                          }, 100);
+                          return () => clearInterval(interval);
+                        }}
+                      >
+                        <Icon.ZoomIn boxSize="20px" />
+                        <Icon.Label>Zoom +</Icon.Label>
+                      </Toolbar.LongPressButton>
+                    </Toolbar.Item>
+                    <Toolbar.Item isActive>
+                      <Toolbar.LongPressButton
+                        onClick={() => {
+                          controlRef.current?.controls.zoomOut();
+                        }}
+                        onLongPress={() => {
+                          const interval = setInterval(() => {
                             controlRef.current?.controls.zoomOut();
-                          }}
-                          onLongPress={() => {
-                            const interval = setInterval(() => {
-                              controlRef.current?.controls.zoomOut();
-                            }, 100);
-
-                            return () => clearInterval(interval);
-                          }}
-                        >
-                          <Icon.ZoomOut boxSize="20px" />
-                          <Icon.Label>Zoom -</Icon.Label>
-                        </Toolbar.LongPressButton>
-                      </Toolbar.Item>
-                      <Toolbar.Item isActive>
-                        <Toolbar.LongPressButton
-                          onClick={() => {
-                            noteWindowActions.showNoteInWindow(
-                              null,
-                              "note-editor",
-                              true
-                            );
-                          }}
-                        >
-                          <Icon.BookOpen boxSize="20px" />
-                          <Icon.Label>Notes</Icon.Label>
-                        </Toolbar.LongPressButton>
-                      </Toolbar.Item>
-                      <Toolbar.Item isActive>
-                        <Toolbar.Button onClick={onLogout}>
-                          <Icon.LogOut boxSize="20px" />
-                          <Icon.Label>Quitter</Icon.Label>
-                        </Toolbar.Button>
-                      </Toolbar.Item>
-                    </Toolbar.Group>
-                  </React.Fragment>
+                          }, 100);
+                          return () => clearInterval(interval);
+                        }}
+                      >
+                        <Icon.ZoomOut boxSize="20px" />
+                        <Icon.Label>Zoom -</Icon.Label>
+                      </Toolbar.LongPressButton>
+                    </Toolbar.Item>
+                    <Toolbar.Item isActive>
+                      <Toolbar.Button
+                        onClick={() => {
+                          window.location.href = "/mj";
+                        }}
+                      >
+                        <Icon.Shield boxSize="20px" />
+                        <Icon.Label>Mode MJ</Icon.Label>
+                      </Toolbar.Button>
+                    </Toolbar.Item>
+                    <Toolbar.Item isActive>
+                      <Toolbar.Button onClick={onLogout}>
+                        <Icon.LogOut boxSize="20px" />
+                        <Icon.Label>Quitter</Icon.Label>
+                      </Toolbar.Button>
+                    </Toolbar.Item>
+                  </Toolbar.Group>
                 ) : null}
               </Toolbar>
             </ToolbarContainer>

@@ -4,6 +4,7 @@ import { disableBodyScroll, enableBodyScroll } from "body-scroll-lock";
 import FocusLock from "react-focus-lock";
 import styled from "@emotion/styled/macro";
 import { useStaticRef } from "./hooks/use-static-ref";
+import { ds } from "./design-system";
 
 const modalRoot = document.getElementById("modal");
 if (!modalRoot) {
@@ -26,27 +27,18 @@ const Context = React.createContext<CreateModalRegistrationFunction>(
   null as any
 );
 
-/**
- * Provider should be mounted once on top of the application
- * The main task of the provider is to orcastrate escape key events.
- */
 const Provider: React.FC<{}> = ({ children }) => {
   const registeredModals = useStaticRef<ModalRegistration[]>(() => []);
 
   const createModalRegistration: CreateModalRegistrationFunction =
     useCallback(() => {
       const modalRegistration = {};
-
       const prevLength = registeredModals.length;
-
       registeredModals.unshift(modalRegistration);
-
       const postLength = registeredModals.length;
-
       if (prevLength === 0 && postLength > 0) {
         disableBodyScroll(bodyElement);
       }
-
       return {
         destroy: () => {
           const index = registeredModals.findIndex(
@@ -71,7 +63,9 @@ const Provider: React.FC<{}> = ({ children }) => {
 };
 
 export const StyledModalBackdrop = styled.div`
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   position: fixed;
   height: 100%;
   width: 100%;
@@ -138,12 +132,10 @@ const ModalPortal: React.FC<{
   useEffect(() => {
     modalRoot.append(modalElement);
     const modalRegistration = createModalRegistration();
-
     return () => {
       modalRoot.removeChild(modalElement);
       modalRegistration.destroy();
     };
-    // modalElement will never change
   }, [modalElement]);
 
   return createPortal(
@@ -162,13 +154,11 @@ const ModalPortal: React.FC<{
   );
 };
 
-// TODO: convert to const enum once all consumers use ts
 export enum ModalDialogSize {
   "DEFAULT" = "DEFAULT",
   "SMALL" = "SMALL",
 }
 
-// TODO: convert to const enum once all consumers use ts
 export enum DialogSizeMappings {
   "DEFAULT" = 1024,
   "SMALL" = 512,
@@ -202,10 +192,13 @@ const Dialog: React.FC<
         width: "100%",
         //@ts-ignore
         maxWidth: DialogSizeMappings[size],
-        backgroundColor: "white",
-        borderRadius: 5,
+        backgroundColor: ds.colors.surface,
+        borderRadius: 14,
         marginLeft: 8,
         marginRight: 8,
+        border: `1px solid ${ds.colors.borderStrong}`,
+        boxShadow: ds.shadows.lg,
+        overflow: "hidden",
       }}
       onClick={(ev) => {
         ev.stopPropagation();
@@ -218,16 +211,28 @@ const Dialog: React.FC<
 };
 
 const Header = styled.div`
-  padding: 8px 20px;
+  padding: 16px 20px;
   width: 100%;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  border-bottom: 1px solid ${ds.colors.border};
   display: flex;
   align-items: center;
+  background: ${ds.colors.surfaceHover};
+
+  h3 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: ${ds.colors.textPrimary};
+    font-family: ${ds.font.sans};
+  }
 `;
 
 const Heading2 = styled.h2`
   margin: 0;
-  font-size: 2rem;
+  font-size: 18px;
+  font-weight: 600;
+  color: ${ds.colors.textPrimary};
+  font-family: ${ds.font.sans};
 
   > svg:first-child {
     display: inline-block;
@@ -238,11 +243,20 @@ const Heading2 = styled.h2`
 
 const Heading3 = styled.h3`
   margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: ${ds.colors.textPrimary};
+  font-family: ${ds.font.sans};
 `;
 
 const Body = styled.div<{ noPadding?: boolean }>`
   width: 100%;
-  padding: ${(p) => (p.noPadding ? null : `20px 20px 20px 20px`)};
+  padding: ${(p) => (p.noPadding ? null : `20px`)};
+  background: ${ds.colors.surface};
+  color: ${ds.colors.textSecondary};
+  font-family: ${ds.font.sans};
+  font-size: 14px;
+  line-height: 1.6;
 `;
 
 const Aside = styled.div`
@@ -250,17 +264,17 @@ const Aside = styled.div`
   flex-direction: column;
   max-width: 30%;
   width: 100%;
-  border-right: 1px solid rgba(0, 0, 0, 0.1);
+  border-right: 1px solid ${ds.colors.border};
+  background: ${ds.colors.surfaceHover};
 `;
 
 const Footer = styled.div`
-  padding-left: 20px;
-  padding-right: 20px;
-  padding-top: 20px;
-  padding-bottom: 16px;
+  padding: 14px 20px;
   display: flex;
   justify-content: flex-end;
-  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  border-top: 1px solid ${ds.colors.border};
+  gap: 8px;
+  background: ${ds.colors.surfaceHover};
 `;
 
 const Content = styled.div`
@@ -275,21 +289,14 @@ const Actions = styled.div`
   display: flex;
   justify-content: flex-end;
   width: 100%;
+  gap: 8px;
 `;
 
 const ActionGroup = styled.div<{ left?: boolean }>`
-  margin-left: ${(p) => (p.left ? "0" : "20px")};
+  margin-left: ${(p) => (p.left ? "0" : "8px")};
   margin-right: ${(p) => (p.left ? "auto" : null)};
-
-  > * {
-    margin-left: 18px;
-  }
-
-  > *:first-of-type {
-    margin-left: 0;
-  }
-
   display: flex;
+  gap: 8px;
 `;
 
 export const Modal = Object.assign(ModalPortal, {

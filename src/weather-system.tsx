@@ -1,6 +1,6 @@
 import * as React from "react";
 import * as THREE from "three";
-import { useFrame } from "react-three-fiber";
+import { useFrame, useThree } from "react-three-fiber";
 import type { WeatherType, WeatherSettings } from "./weather-types";
 
 export type { WeatherType, WeatherSettings };
@@ -88,6 +88,7 @@ const RainSystem = React.memo(
     baseSpeed,
     opacity,
     dimensions,
+    clippingPlanes,
   }: {
     config: WeatherConfig;
     count: number;
@@ -95,6 +96,7 @@ const RainSystem = React.memo(
     baseSpeed: number;
     opacity: number;
     dimensions: WeatherDimensions;
+    clippingPlanes: THREE.Plane[];
   }) => {
     const geomRef = React.useRef<THREE.BufferGeometry>(null);
     const stateRef = React.useRef<LineState | null>(null);
@@ -167,6 +169,7 @@ const RainSystem = React.memo(
           opacity={opacity * config.intensity}
           depthWrite={false}
           depthTest={false}
+          clippingPlanes={clippingPlanes}
         />
       </lineSegments>
     );
@@ -196,9 +199,11 @@ const SnowSystem = React.memo(
   ({
     config,
     dimensions,
+    clippingPlanes,
   }: {
     config: WeatherConfig;
     dimensions: WeatherDimensions;
+    clippingPlanes: THREE.Plane[];
   }) => {
     const geomRef = React.useRef<THREE.BufferGeometry>(null);
     const pos = React.useRef(new Float32Array(SNOW_COUNT * 3));
@@ -270,6 +275,7 @@ const SnowSystem = React.memo(
           opacity={0.8 * config.intensity}
           depthWrite={false}
           depthTest={false}
+          clippingPlanes={clippingPlanes}
         />
       </points>
     );
@@ -362,15 +368,35 @@ type Props = {
   dimensions: WeatherDimensions;
 };
 
-export const WeatherSystem = React.memo(({ config, dimensions }: Props) => {
-  if (config.type === "none") return null;
+const WeatherSystemInner = ({ config, dimensions }: Props) => {
+  const { gl } = useThree();
+
+  React.useEffect(() => {
+    gl.localClippingEnabled = true;
+  }, [gl]);
+
+  const clippingPlanes = React.useMemo(
+    () => [
+      new THREE.Plane(new THREE.Vector3(1, 0, 0), dimensions.width / 2),
+      new THREE.Plane(new THREE.Vector3(-1, 0, 0), dimensions.width / 2),
+      new THREE.Plane(new THREE.Vector3(0, 1, 0), dimensions.height / 2),
+      new THREE.Plane(new THREE.Vector3(0, -1, 0), dimensions.height / 2),
+    ],
+    [dimensions.width, dimensions.height]
+  );
 
   if (config.type === "sun") {
     return <SunOverlay intensity={config.intensity} dimensions={dimensions} />;
   }
 
   if (config.type === "snow") {
-    return <SnowSystem config={config} dimensions={dimensions} />;
+    return (
+      <SnowSystem
+        config={config}
+        dimensions={dimensions}
+        clippingPlanes={clippingPlanes}
+      />
+    );
   }
 
   if (config.type === "rain") {
@@ -382,6 +408,7 @@ export const WeatherSystem = React.memo(({ config, dimensions }: Props) => {
         baseSpeed={0.022}
         opacity={0.55}
         dimensions={dimensions}
+        clippingPlanes={clippingPlanes}
       />
     );
   }
@@ -396,6 +423,7 @@ export const WeatherSystem = React.memo(({ config, dimensions }: Props) => {
           baseSpeed={0.04}
           opacity={0.65}
           dimensions={dimensions}
+          clippingPlanes={clippingPlanes}
         />
         <LightningOverlay
           intensity={config.intensity}
@@ -406,4 +434,9 @@ export const WeatherSystem = React.memo(({ config, dimensions }: Props) => {
   }
 
   return null;
+};
+
+export const WeatherSystem = React.memo(({ config, dimensions }: Props) => {
+  if (config.type === "none") return null;
+  return <WeatherSystemInner config={config} dimensions={dimensions} />;
 });

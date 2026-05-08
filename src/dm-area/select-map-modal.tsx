@@ -19,6 +19,7 @@ import { useInvokeOnScrollEnd } from "../hooks/use-invoke-on-scroll-end";
 import { selectMapModal_ActiveMap_MapFragment$key } from "./__generated__/selectMapModal_ActiveMap_MapFragment.graphql";
 import { selectMapModal_ActiveMapQuery } from "./__generated__/selectMapModal_ActiveMapQuery.graphql";
 import { selectMapModal_MapCreateFromUrlMutation } from "./__generated__/selectMapModal_MapCreateFromUrlMutation.graphql";
+import { selectMapModal_MapUpdateDescriptionMutation } from "./__generated__/selectMapModal_MapUpdateDescriptionMutation.graphql";
 
 type CreateNewMapButtonProps = {
   children: React.ReactChild;
@@ -134,6 +135,19 @@ const SelectMapModal_MapUpdateTitleMutation = graphql`
   }
 `;
 
+const SelectMapModal_MapUpdateDescriptionMutation = graphql`
+  mutation selectMapModal_MapUpdateDescriptionMutation(
+    $input: MapUpdateDescriptionInput!
+  ) {
+    mapUpdateDescription(input: $input) {
+      updatedMap {
+        id
+        description
+      }
+    }
+  }
+`;
+
 const SelectMapModal_MapList_MapsFragment = graphql`
   fragment selectMapModal_MapList_MapsFragment on Query
   @argumentDefinitions(
@@ -201,6 +215,7 @@ const SelectMapModal_ActiveMap_MapFragment = graphql`
   fragment selectMapModal_ActiveMap_MapFragment on Map {
     id
     title
+    description
     mapImageUrl
     mediaType
   }
@@ -210,11 +225,18 @@ const ActiveMap = (props: {
   activeMap: selectMapModal_ActiveMap_MapFragment$key;
   setModalState: React.Dispatch<React.SetStateAction<ModalStates | null>>;
   setLoadedMapId: (loadedMapId: string) => void;
+  updateDescription: (mapId: string, description: string) => void;
 }): React.ReactElement => {
   const activeMap = useFragment(
     SelectMapModal_ActiveMap_MapFragment,
     props.activeMap
   );
+  const [descriptionDraft, setDescriptionDraft] = React.useState(
+    activeMap.description
+  );
+  React.useEffect(() => {
+    setDescriptionDraft(activeMap.description);
+  }, [activeMap.id, activeMap.description]);
 
   return (
     <Modal.Content>
@@ -253,7 +275,48 @@ const ActiveMap = (props: {
       </div>
       <div
         style={{
-          height: "100%",
+          paddingLeft: 16,
+          paddingRight: 16,
+          paddingBottom: 12,
+        }}
+      >
+        <textarea
+          value={descriptionDraft}
+          onChange={(e) => setDescriptionDraft(e.target.value)}
+          onBlur={() => {
+            if (descriptionDraft !== activeMap.description) {
+              props.updateDescription(activeMap.id, descriptionDraft);
+            }
+          }}
+          placeholder="Notes sur cette carte…"
+          rows={3}
+          style={{
+            width: "100%",
+            resize: "vertical",
+            background: "rgba(255,255,255,0.04)",
+            border: "1px solid rgba(255,255,255,0.08)",
+            borderRadius: 8,
+            color: "#e8e6e1",
+            fontFamily: "'Inter', system-ui, sans-serif",
+            fontSize: 13,
+            lineHeight: 1.5,
+            padding: "8px 10px",
+            outline: "none",
+            boxSizing: "border-box",
+          }}
+          onFocus={(e) => {
+            e.currentTarget.style.borderColor = "rgba(96,165,250,0.4)";
+            e.currentTarget.style.background = "rgba(96,165,250,0.06)";
+          }}
+          onBlurCapture={(e) => {
+            e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)";
+            e.currentTarget.style.background = "rgba(255,255,255,0.04)";
+          }}
+        />
+      </div>
+      <div
+        style={{
+          flex: 1,
           width: "100%",
           overflowY: "scroll",
         }}
@@ -385,6 +448,10 @@ export const SelectMapModal = ({
   const [mapUpdateTitle] = useMutation<selectMapModal_MapUpdateTitleMutation>(
     SelectMapModal_MapUpdateTitleMutation
   );
+  const [mapUpdateDescription] =
+    useMutation<selectMapModal_MapUpdateDescriptionMutation>(
+      SelectMapModal_MapUpdateDescriptionMutation
+    );
 
   const onChangeFilter = React.useCallback(
     (ev) => {
@@ -463,7 +530,7 @@ export const SelectMapModal = ({
                 />
               ) : null}
 
-              <Modal.Footer>
+              <Modal.Footer style={{ flexDirection: "column", gap: 6 }}>
                 <CreateNewMapButton
                   tabIndex={1}
                   fullWidth
@@ -478,7 +545,6 @@ export const SelectMapModal = ({
                 <Button.Tertiary
                   tabIndex={1}
                   fullWidth
-                  style={{ marginTop: 4 }}
                   onClick={() =>
                     setModalState({ type: ModalType.CREATE_MAP_FROM_URL })
                   }
@@ -492,6 +558,13 @@ export const SelectMapModal = ({
                 activeMap={activeMapResponse.data.map}
                 setLoadedMapId={setLoadedMapId}
                 setModalState={setModalState}
+                updateDescription={(mapId, description) =>
+                  mapUpdateDescription({
+                    variables: {
+                      input: { mapId, newDescription: description },
+                    },
+                  })
+                }
               />
             ) : null}
           </Modal.Body>
