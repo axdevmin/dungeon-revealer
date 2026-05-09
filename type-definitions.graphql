@@ -397,6 +397,8 @@ enum WeatherType {
   storm
   snow
   sun
+  moon
+  wind
 }
 
 type Mutation {

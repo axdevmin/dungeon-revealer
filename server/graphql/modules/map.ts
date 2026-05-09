@@ -59,6 +59,8 @@ const GraphQLWeatherTypeEnum = t.enumType<WeatherType>({
     { name: "storm", value: "storm" as const },
     { name: "snow", value: "snow" as const },
     { name: "sun", value: "sun" as const },
+    { name: "moon", value: "moon" as const },
+    { name: "wind", value: "wind" as const },
   ],
 });
 
