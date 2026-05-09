@@ -232,6 +232,10 @@ export const bootstrapServer = async (env: ReturnType<typeof getEnv>) => {
     res.send(indexHtmlContent);
   });
 
+  app.get("/mj", (_, res) => {
+    res.send(indexHtmlContent);
+  });
+
   // Consider all URLs under /public/ as static files, and return them raw.
   app.use(
     express.static(path.join(env.PUBLIC_PATH), {

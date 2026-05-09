@@ -1,0 +1,56 @@
+name: Deploy to Oracle VPS
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Bump version (patch)
+        id: version
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          npm version patch --no-git-tag-version
+          VERSION=$(node -p "require('./package.json').version")
+          git add package.json package-lock.json
+          git commit -m "chore: bump version to v${VERSION} [skip ci]"
+          git push origin master
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+
+      - name: Deploy sur le VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ubuntu
+          key: ${{ secrets.VPS_SSH_KEY }}
+          timeout: 30m
+          script: |
+            cd dungeon-revealer
+            git pull origin master
+
+            sudo docker build -t dungeon-revealer .
+
+            sudo docker stop dungeon-revealer || true
+            sudo docker rm dungeon-revealer || true
+
+            sudo docker run -d \
+              --name dungeon-revealer \
+              --restart always \
+              -p 3000:3000 \
+              -v /home/ubuntu/dungeon-data:/var/data/dungeon-revealer \
+              -e DATA_DIRECTORY=/var/data/dungeon-revealer \
+              -e DM_PASSWORD='${{ secrets.DM_PASSWORD }}' \
+              -e PC_PASSWORD='${{ secrets.PC_PASSWORD }}' \
+              dungeon-revealer
+
+            sudo docker image prune -f

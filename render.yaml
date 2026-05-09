@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: dungeon-revealer
+    runtime: node
+    buildCommand: npm install && npm run build
+    startCommand: node server-build/index.js
+    plan: starter
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: DATA_DIRECTORY
+        value: /var/data/dungeon-revealer
+    volumes:
+      - path: /var/data/dungeon-revealer
+        name: dungeon-revealer-data
+    healthCheckPath: /
+    autoDeploy: true

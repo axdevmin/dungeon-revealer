@@ -17,6 +17,105 @@ In order to allow players and even other DMs to remotely access to your installa
 
 - [Install Dungeon Revealer on a Digital Ocean Droplet](https://www.ehrenpforte.com/technical-2/943/)
 
+#### Deploying on Oracle Cloud Free Tier (Always-On, Free)
+
+Oracle Cloud offers a permanently free VM (VM.Standard.E2.1.Micro) sufficient for small group sessions (2–6 players).
+
+**Prerequisites**
+
+- Oracle Cloud account with a free VM running Ubuntu 20.04+
+- A reserved public IPv4 attached to the VM
+- A free DuckDNS subdomain pointing to your IP
+- Docker installed on the VM
+- Ports 22, 80, 443 open in Oracle Cloud security list and Ubuntu iptables
+
+**Install Docker**
+
+```bash
+sudo apt-get update
+sudo apt-get install -y apt-transport-https ca-certificates curl gnupg
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu focal stable" | sudo tee /etc/apt/sources.list.d/docker.list
+sudo apt-get update
+sudo apt-get install -y docker-ce docker-ce-cli containerd.io
+sudo usermod -aG docker $USER
+```
+
+**Build and run the container**
+
+```bash
+git clone https://github.com/YOUR_USER/dungeon-revealer.git
+cd dungeon-revealer
+git checkout YOUR_BRANCH
+sudo docker build -t dungeon-revealer .
+
+sudo docker run -d \
+  --name dungeon-revealer \
+  --restart always \
+  -p 3000:3000 \
+  -v /home/ubuntu/dungeon-data:/var/data/dungeon-revealer \
+  -e DATA_DIRECTORY=/var/data/dungeon-revealer \
+  -e DM_PASSWORD='your-dm-password' \
+  -e PC_PASSWORD='your-pc-password' \
+  dungeon-revealer
+```
+
+> **Important:** Always use `-v` to mount a host directory to `/var/data/dungeon-revealer` and set `DATA_DIRECTORY` to the same path. This ensures maps, tokens and notes persist across container restarts and redeployments.
+
+**Set up HTTPS with nginx + Let's Encrypt**
+
+```bash
+sudo apt-get install -y nginx certbot python3-certbot-nginx
+
+# Open firewall ports
+sudo iptables -I INPUT -p tcp --dport 80 -j ACCEPT
+sudo iptables -I INPUT -p tcp --dport 443 -j ACCEPT
+sudo iptables-save | sudo tee /etc/iptables/rules.v4
+
+# Configure nginx
+sudo tee /etc/nginx/sites-available/dungeon-revealer > /dev/null << 'EOF'
+server {
+    listen 80;
+    server_name your-domain.duckdns.org;
+
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+EOF
+
+sudo ln -sf /etc/nginx/sites-available/dungeon-revealer /etc/nginx/sites-enabled/
+sudo rm -f /etc/nginx/sites-enabled/default
+sudo nginx -t && sudo systemctl restart nginx
+
+# Generate SSL certificate (auto-renews every 90 days)
+sudo certbot --nginx -d your-domain.duckdns.org --non-interactive --agree-tos -m your@email.com
+```
+
+**Updating the application**
+
+```bash
+ssh your-vps
+cd dungeon-revealer
+git pull
+sudo docker build -t dungeon-revealer .
+sudo docker stop dungeon-revealer && sudo docker rm dungeon-revealer
+sudo docker run -d \
+  --name dungeon-revealer \
+  --restart always \
+  -p 3000:3000 \
+  -v /home/ubuntu/dungeon-data:/var/data/dungeon-revealer \
+  -e DATA_DIRECTORY=/var/data/dungeon-revealer \
+  -e DM_PASSWORD='your-dm-password' \
+  -e PC_PASSWORD='your-pc-password' \
+  dungeon-revealer
+```
+
 ### Usage with Reverse Proxy
 
 #### Basic Usage
