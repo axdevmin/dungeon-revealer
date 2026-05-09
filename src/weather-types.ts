@@ -5,7 +5,8 @@ export type WeatherType =
   | "snow"
   | "sun"
   | "moon"
-  | "wind";
+  | "wind"
+  | "cloudy";
 
 export type WeatherSettings = {
   type: WeatherType;

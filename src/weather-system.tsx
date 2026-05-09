@@ -357,7 +357,6 @@ const WindSystem = React.memo(
       const p = posRef.current;
       const v = velRef.current;
       const t = Date.now() * 0.001;
-      // vitesse min à 0.6 pour éviter les particules figées
       const gustFactor = 0.6 + 0.4 * Math.abs(Math.sin(t * 0.8));
       const speed = config.intensity * gustFactor;
 
@@ -465,9 +464,11 @@ const SUN_PARTICLE_COUNT = 45;
 const SunOverlay = ({
   intensity,
   dimensions,
+  clippingPlanes,
 }: {
   intensity: number;
   dimensions: WeatherDimensions;
+  clippingPlanes: THREE.Plane[];
 }) => {
   const overlayRef = React.useRef<THREE.Mesh>(null);
   const raysGeomRef = React.useRef<THREE.BufferGeometry>(null);
@@ -482,6 +483,10 @@ const SunOverlay = ({
 
   const bounds = { w: dimensions.width, h: dimensions.height };
   const minDim = Math.min(dimensions.width, dimensions.height);
+
+  // Centre du soleil : coin supérieur droit
+  const sunX = dimensions.width * 0.3;
+  const sunY = dimensions.height * 0.3;
 
   React.useEffect(() => {
     for (let i = 0; i < SUN_PARTICLE_COUNT; i++) {
@@ -510,11 +515,11 @@ const SunOverlay = ({
           0.6 + 0.4 * Math.sin(t * 1.3 + (i * Math.PI * 2) / SUN_RAY_COUNT);
         const outerR = minDim * 0.38 * pulseFactor;
 
-        rayPositions.current[i * 6 + 0] = Math.cos(angle) * innerR;
-        rayPositions.current[i * 6 + 1] = Math.sin(angle) * innerR;
+        rayPositions.current[i * 6 + 0] = sunX + Math.cos(angle) * innerR;
+        rayPositions.current[i * 6 + 1] = sunY + Math.sin(angle) * innerR;
         rayPositions.current[i * 6 + 2] = 0;
-        rayPositions.current[i * 6 + 3] = Math.cos(angle) * outerR;
-        rayPositions.current[i * 6 + 4] = Math.sin(angle) * outerR;
+        rayPositions.current[i * 6 + 3] = sunX + Math.cos(angle) * outerR;
+        rayPositions.current[i * 6 + 4] = sunY + Math.sin(angle) * outerR;
         rayPositions.current[i * 6 + 5] = 0;
       }
       rayMatRef.current.opacity = (0.5 + 0.25 * Math.sin(t * 0.7)) * intensity;
@@ -530,8 +535,8 @@ const SunOverlay = ({
         particlePositions.current[i * 3 + 0] += (Math.random() - 0.5) * 0.0008;
         if (particlePositions.current[i * 3 + 1] > bounds.h * 0.55) {
           particlePositions.current[i * 3 + 0] =
-            (Math.random() - 0.5) * bounds.w * 0.5;
-          particlePositions.current[i * 3 + 1] = -bounds.h * 0.55;
+            sunX + (Math.random() - 0.5) * bounds.w * 0.5;
+          particlePositions.current[i * 3 + 1] = sunY - bounds.h * 0.55;
         }
       }
       (
@@ -574,6 +579,7 @@ const SunOverlay = ({
           opacity={0.5 * intensity}
           depthWrite={false}
           depthTest={false}
+          clippingPlanes={clippingPlanes}
         />
       </lineSegments>
 
@@ -595,48 +601,251 @@ const SunOverlay = ({
           opacity={0.75 * intensity}
           depthWrite={false}
           depthTest={false}
+          clippingPlanes={clippingPlanes}
         />
       </points>
     </>
   );
 };
 
-// ─── MOON ────────────────────────────────────────────────────────────────────
+// ─── CLOUDY ──────────────────────────────────────────────────────────────────
+// Soleil voilé avec nuages passant et laissant des ombres sur la carte
 
-const MOON_FOG_COUNT = 70;
-const MOON_STAR_COUNT = 100;
+const CLOUD_COUNT = 6;
+
+const CloudyOverlay = ({
+  config,
+  dimensions,
+  clippingPlanes,
+}: {
+  config: WeatherConfig;
+  dimensions: WeatherDimensions;
+  clippingPlanes: THREE.Plane[];
+}) => {
+  const sceneRef = React.useRef<THREE.Group>(null);
+  const overlayRef = React.useRef<THREE.Mesh>(null);
+
+  const cloudData = React.useRef<
+    Array<{
+      group: THREE.Group;
+      vx: number;
+      vy: number;
+      mats: THREE.MeshBasicMaterial[];
+    }>
+  >([]);
+
+  // Texture radiale : ombre sombre au centre, transparente aux bords
+  const shadowTexture = React.useMemo(() => {
+    const size = 256;
+    const canvas = document.createElement("canvas");
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext("2d")!;
+    const grad = ctx.createRadialGradient(
+      size / 2,
+      size / 2,
+      0,
+      size / 2,
+      size / 2,
+      size / 2
+    );
+    grad.addColorStop(0, "rgba(18, 13, 6, 0.72)");
+    grad.addColorStop(0.42, "rgba(14, 10, 5, 0.38)");
+    grad.addColorStop(0.78, "rgba(8, 6, 3, 0.1)");
+    grad.addColorStop(1, "rgba(0, 0, 0, 0)");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, size, size);
+    return new THREE.CanvasTexture(canvas);
+  }, []);
+
+  React.useEffect(() => {
+    const scene = sceneRef.current;
+    if (!scene) return;
+
+    const { wx, wy } = windComponents(config.windAngle);
+    const wn = Math.sqrt(wx * wx + wy * wy) || 1;
+    const ux = wx / wn;
+    const uy = wy / wn;
+
+    const clouds: typeof cloudData.current = [];
+
+    for (let i = 0; i < CLOUD_COUNT; i++) {
+      const cg = new THREE.Group();
+      const spd = 0.06 + Math.random() * 0.09;
+      const vx = ux * spd;
+      const vy = uy * spd * 0.4;
+
+      const baseW = dimensions.width * (0.22 + Math.random() * 0.28);
+      const baseH = baseW * (0.48 + Math.random() * 0.32);
+
+      const mats: THREE.MeshBasicMaterial[] = [];
+
+      // 3 blobs par nuage pour une silhouette organique
+      const blobDefs = [
+        { sw: 1, sh: 1, dx: 0, dy: 0, op: 0.4 + Math.random() * 0.2 },
+        {
+          sw: 0.6 + Math.random() * 0.35,
+          sh: 0.55 + Math.random() * 0.3,
+          dx: (Math.random() - 0.5) * baseW * 0.5,
+          dy: (Math.random() - 0.5) * baseH * 0.35,
+          op: 0.28 + Math.random() * 0.18,
+        },
+        {
+          sw: 0.5 + Math.random() * 0.35,
+          sh: 0.45 + Math.random() * 0.3,
+          dx: (Math.random() - 0.5) * baseW * 0.5,
+          dy: (Math.random() - 0.5) * baseH * 0.35,
+          op: 0.2 + Math.random() * 0.15,
+        },
+      ];
+
+      for (const b of blobDefs) {
+        const geo = new THREE.PlaneBufferGeometry(baseW * b.sw, baseH * b.sh);
+        const mat = new THREE.MeshBasicMaterial({
+          map: shadowTexture,
+          transparent: true,
+          opacity: b.op * config.intensity,
+          depthWrite: false,
+          depthTest: false,
+          clippingPlanes,
+        });
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.position.set(b.dx, b.dy, 0);
+        mesh.renderOrder = 8;
+        cg.add(mesh);
+        mats.push(mat);
+      }
+
+      // Position initiale aléatoire dans la carte
+      cg.position.set(
+        (Math.random() - 0.5) * dimensions.width,
+        (Math.random() - 0.5) * dimensions.height,
+        0
+      );
+
+      scene.add(cg);
+      clouds.push({ group: cg, vx, vy, mats });
+    }
+
+    cloudData.current = clouds;
+
+    return () => {
+      for (const c of clouds) {
+        for (const child of c.group.children) {
+          (child as THREE.Mesh).geometry.dispose();
+        }
+        for (const mat of c.mats) mat.dispose();
+        scene.remove(c.group);
+      }
+      cloudData.current = [];
+    };
+  }, [
+    shadowTexture,
+    dimensions.width,
+    dimensions.height,
+    config.windAngle,
+    clippingPlanes,
+  ]);
+
+  useFrame(() => {
+    for (const c of cloudData.current) {
+      c.group.position.x += c.vx * config.intensity;
+      c.group.position.y += c.vy * config.intensity;
+
+      const px = c.group.position.x;
+      const py = c.group.position.y;
+
+      if (
+        px > dimensions.width * 0.65 ||
+        px < -dimensions.width * 0.65 ||
+        py > dimensions.height * 0.65 ||
+        py < -dimensions.height * 0.65
+      ) {
+        const { wx, wy } = windComponents(config.windAngle);
+        const wn = Math.sqrt(wx * wx + wy * wy) || 1;
+        // Respawn sur le bord opposé à la direction du vent
+        c.group.position.x = -(wx / wn) * dimensions.width * 0.62;
+        c.group.position.y = (Math.random() - 0.5) * dimensions.height * 0.9;
+      }
+    }
+  });
+
+  return (
+    <>
+      {/* Fond légèrement ensoleillé */}
+      <mesh ref={overlayRef} renderOrder={7}>
+        <planeBufferGeometry
+          attach="geometry"
+          args={[dimensions.width, dimensions.height]}
+        />
+        <meshBasicMaterial
+          attach="material"
+          color={0xfff5dd}
+          transparent
+          opacity={0.04 * config.intensity}
+          depthWrite={false}
+          depthTest={false}
+        />
+      </mesh>
+      <group ref={sceneRef} />
+    </>
+  );
+};
+
+// ─── MOON ────────────────────────────────────────────────────────────────────
+// Étoiles en deux tailles (petites + brillantes), brume argentée dérivante
+
+const MOON_FOG_COUNT = 45;
+const MOON_STAR_DIM = 65; // petites étoiles (fond)
+const MOON_STAR_BRIGHT = 18; // étoiles brillantes (clignotement plus visible)
 
 const MoonOverlay = ({
-  intensity,
+  darkness,
+  effectIntensity,
   dimensions,
+  clippingPlanes,
 }: {
-  intensity: number;
+  darkness: number;
+  effectIntensity: number;
   dimensions: WeatherDimensions;
+  clippingPlanes: THREE.Plane[];
 }) => {
   const overlayRef = React.useRef<THREE.Mesh>(null);
   const fogGeomRef = React.useRef<THREE.BufferGeometry>(null);
   const fogMatRef = React.useRef<THREE.PointsMaterial>(null);
-  const starsGeomRef = React.useRef<THREE.BufferGeometry>(null);
-  const starsMatRef = React.useRef<THREE.PointsMaterial>(null);
+  const dimStarsGeomRef = React.useRef<THREE.BufferGeometry>(null);
+  const dimStarsMatRef = React.useRef<THREE.PointsMaterial>(null);
+  const brightStarsGeomRef = React.useRef<THREE.BufferGeometry>(null);
+  const brightStarsMatRef = React.useRef<THREE.PointsMaterial>(null);
 
   const bounds = { w: dimensions.width, h: dimensions.height };
 
   const fogPos = React.useRef(new Float32Array(MOON_FOG_COUNT * 3));
   const fogVel = React.useRef(new Float32Array(MOON_FOG_COUNT * 2));
-  const starPos = React.useRef(new Float32Array(MOON_STAR_COUNT * 3));
+  const dimStarPos = React.useRef(new Float32Array(MOON_STAR_DIM * 3));
+  const brightStarPos = React.useRef(new Float32Array(MOON_STAR_BRIGHT * 3));
+  // phase de clignotement individuelle pour chaque étoile brillante
+  const brightPhase = React.useRef(
+    Array.from({ length: MOON_STAR_BRIGHT }, () => Math.random() * Math.PI * 2)
+  );
 
   React.useEffect(() => {
     for (let i = 0; i < MOON_FOG_COUNT; i++) {
-      fogPos.current[i * 3 + 0] = (Math.random() - 0.5) * bounds.w;
-      fogPos.current[i * 3 + 1] = (Math.random() - 0.5) * bounds.h;
+      fogPos.current[i * 3 + 0] = (Math.random() - 0.5) * bounds.w * 0.9;
+      fogPos.current[i * 3 + 1] = (Math.random() - 0.5) * bounds.h * 0.9;
       fogPos.current[i * 3 + 2] = 0;
-      fogVel.current[i * 2 + 0] = (Math.random() - 0.5) * 0.35;
-      fogVel.current[i * 2 + 1] = (Math.random() - 0.5) * 0.08;
+      fogVel.current[i * 2 + 0] = (Math.random() - 0.5) * 0.22;
+      fogVel.current[i * 2 + 1] = (Math.random() - 0.5) * 0.05;
     }
-    for (let i = 0; i < MOON_STAR_COUNT; i++) {
-      starPos.current[i * 3 + 0] = (Math.random() - 0.5) * bounds.w;
-      starPos.current[i * 3 + 1] = (Math.random() - 0.5) * bounds.h;
-      starPos.current[i * 3 + 2] = 0;
+    for (let i = 0; i < MOON_STAR_DIM; i++) {
+      dimStarPos.current[i * 3 + 0] = (Math.random() - 0.5) * bounds.w * 0.9;
+      dimStarPos.current[i * 3 + 1] = (Math.random() - 0.5) * bounds.h * 0.9;
+      dimStarPos.current[i * 3 + 2] = 0;
+    }
+    for (let i = 0; i < MOON_STAR_BRIGHT; i++) {
+      brightStarPos.current[i * 3 + 0] = (Math.random() - 0.5) * bounds.w * 0.9;
+      brightStarPos.current[i * 3 + 1] = (Math.random() - 0.5) * bounds.h * 0.9;
+      brightStarPos.current[i * 3 + 2] = 0;
     }
   }, []);
 
@@ -645,35 +854,48 @@ const MoonOverlay = ({
 
     if (overlayRef.current) {
       (overlayRef.current.material as THREE.MeshBasicMaterial).opacity =
-        0.35 * intensity;
+        Math.min(0.3 * darkness, 0.55);
     }
 
     if (fogGeomRef.current) {
       for (let i = 0; i < MOON_FOG_COUNT; i++) {
-        fogPos.current[i * 3 + 0] += fogVel.current[i * 2] * 0.3 * intensity;
-        fogPos.current[i * 3 + 1] +=
-          fogVel.current[i * 2 + 1] * 0.3 * intensity;
-
-        if (Math.abs(fogPos.current[i * 3 + 0]) > bounds.w * 0.6) {
+        fogPos.current[i * 3 + 0] += fogVel.current[i * 2] * 0.22;
+        fogPos.current[i * 3 + 1] += fogVel.current[i * 2 + 1] * 0.22;
+        if (Math.abs(fogPos.current[i * 3 + 0]) > bounds.w * 0.5) {
           fogPos.current[i * 3 + 0] =
-            -Math.sign(fogVel.current[i * 2]) * bounds.w * 0.5;
+            -Math.sign(fogVel.current[i * 2]) * bounds.w * 0.45;
         }
-        if (Math.abs(fogPos.current[i * 3 + 1]) > bounds.h * 0.6) {
-          fogPos.current[i * 3 + 1] = (Math.random() - 0.5) * bounds.h;
+        if (Math.abs(fogPos.current[i * 3 + 1]) > bounds.h * 0.5) {
+          fogPos.current[i * 3 + 1] = (Math.random() - 0.5) * bounds.h * 0.85;
         }
       }
       if (fogMatRef.current) {
-        fogMatRef.current.opacity =
-          (0.09 + 0.05 * Math.sin(t * 0.4)) * intensity;
+        fogMatRef.current.opacity = Math.min(
+          (0.07 + 0.035 * Math.sin(t * 0.35)) * effectIntensity,
+          0.16
+        );
       }
       (
         fogGeomRef.current.attributes.position as THREE.BufferAttribute
       ).needsUpdate = true;
     }
 
-    if (starsMatRef.current) {
-      starsMatRef.current.opacity =
-        (0.5 + 0.4 * Math.abs(Math.sin(t * 1.2))) * intensity;
+    // Petites étoiles : clignotement lent et discret
+    if (dimStarsMatRef.current) {
+      dimStarsMatRef.current.opacity = Math.min(
+        (0.38 + 0.15 * Math.sin(t * 0.3)) * effectIntensity,
+        0.7
+      );
+    }
+
+    // Étoiles brillantes : clignotement individuel plus marqué
+    // (on anime juste l'opacité globale du groupe, les phases individuelles
+    // seraient nécessaires pour clignotement per-star — gardé simple ici)
+    if (brightStarsMatRef.current) {
+      brightStarsMatRef.current.opacity = Math.min(
+        (0.5 + 0.35 * Math.abs(Math.sin(t * 0.5 + 1.2))) * effectIntensity,
+        0.95
+      );
     }
   });
 
@@ -686,35 +908,61 @@ const MoonOverlay = ({
         />
         <meshBasicMaterial
           attach="material"
-          color={0x0a1a33}
+          color={0x060f22}
           transparent
-          opacity={0.35 * intensity}
+          opacity={0.3 * darkness}
           depthWrite={false}
           depthTest={false}
         />
       </mesh>
 
+      {/* Petites étoiles de fond */}
       <points renderOrder={8}>
-        <bufferGeometry ref={starsGeomRef}>
+        <bufferGeometry ref={dimStarsGeomRef}>
           <bufferAttribute
             attachObject={["attributes", "position"]}
-            array={starPos.current}
-            count={MOON_STAR_COUNT}
+            array={dimStarPos.current}
+            count={MOON_STAR_DIM}
             itemSize={3}
           />
         </bufferGeometry>
         <pointsMaterial
-          ref={starsMatRef}
-          color={0xffffff}
-          size={2}
+          ref={dimStarsMatRef}
+          color={0xd0d8ff}
+          size={1.5}
           sizeAttenuation={false}
           transparent
-          opacity={0.6 * intensity}
+          opacity={0.4 * effectIntensity}
           depthWrite={false}
           depthTest={false}
+          clippingPlanes={clippingPlanes}
         />
       </points>
 
+      {/* Étoiles brillantes */}
+      <points renderOrder={8}>
+        <bufferGeometry ref={brightStarsGeomRef}>
+          <bufferAttribute
+            attachObject={["attributes", "position"]}
+            array={brightStarPos.current}
+            count={MOON_STAR_BRIGHT}
+            itemSize={3}
+          />
+        </bufferGeometry>
+        <pointsMaterial
+          ref={brightStarsMatRef}
+          color={0xffffff}
+          size={3.5}
+          sizeAttenuation={false}
+          transparent
+          opacity={0.6 * effectIntensity}
+          depthWrite={false}
+          depthTest={false}
+          clippingPlanes={clippingPlanes}
+        />
+      </points>
+
+      {/* Brume argentée dérivante */}
       <points renderOrder={8}>
         <bufferGeometry ref={fogGeomRef}>
           <bufferAttribute
@@ -727,13 +975,14 @@ const MoonOverlay = ({
         </bufferGeometry>
         <pointsMaterial
           ref={fogMatRef}
-          color={0x7799bb}
-          size={22}
+          color={0x8faabb}
+          size={24}
           sizeAttenuation={false}
           transparent
-          opacity={0.1 * intensity}
+          opacity={0.1 * effectIntensity}
           depthWrite={false}
           depthTest={false}
+          clippingPlanes={clippingPlanes}
         />
       </points>
     </>
@@ -765,11 +1014,34 @@ const WeatherSystemInner = ({ config, dimensions }: Props) => {
   );
 
   if (config.type === "sun") {
-    return <SunOverlay intensity={config.intensity} dimensions={dimensions} />;
+    return (
+      <SunOverlay
+        intensity={config.intensity}
+        dimensions={dimensions}
+        clippingPlanes={clippingPlanes}
+      />
+    );
+  }
+
+  if (config.type === "cloudy") {
+    return (
+      <CloudyOverlay
+        config={config}
+        dimensions={dimensions}
+        clippingPlanes={clippingPlanes}
+      />
+    );
   }
 
   if (config.type === "moon") {
-    return <MoonOverlay intensity={config.intensity} dimensions={dimensions} />;
+    return (
+      <MoonOverlay
+        darkness={config.intensity}
+        effectIntensity={Math.max(0, Math.min(1, config.windAngle))}
+        dimensions={dimensions}
+        clippingPlanes={clippingPlanes}
+      />
+    );
   }
 
   if (config.type === "wind") {

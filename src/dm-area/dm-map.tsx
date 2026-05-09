@@ -546,9 +546,12 @@ const WeatherButton = (props: {
   const WEATHER_ICONS: Record<string, string> = {
     none: "—",
     sun: "☀️",
+    cloudy: "⛅",
     rain: "🌧️",
     storm: "⛈️",
     snow: "❄️",
+    wind: "💨",
+    moon: "🌙",
   };
   const icon = WEATHER_ICONS[map.weatherSettings.type] ?? "—";
 

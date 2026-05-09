@@ -164,6 +164,9 @@ const SelectMapModal_MapList_MapsFragment = graphql`
           id
           title
           mapImageUrl
+          weatherSettings {
+            type
+          }
         }
       }
     }
@@ -202,6 +205,21 @@ const MapList = (props: {
               props.setActiveMapId(item.node.id);
             }}
           >
+            {(() => {
+              const weatherIcons: Record<string, string> = {
+                sun: "☀️",
+                cloudy: "⛅",
+                rain: "🌧️",
+                storm: "⛈️",
+                snow: "❄️",
+                wind: "💨",
+                moon: "🌙",
+              };
+              const icon = weatherIcons[item.node.weatherSettings.type];
+              return icon ? (
+                <span title={item.node.weatherSettings.type}>{icon} </span>
+              ) : null;
+            })()}
             {item.node.title}{" "}
             {item.node.id === props.liveMapId ? "(live)" : null}
           </ScrollableList.ListItemButton>

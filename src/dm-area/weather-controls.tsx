@@ -44,6 +44,7 @@ type WeatherOption = {
 const WEATHER_OPTIONS: WeatherOption[] = [
   { type: "none", label: "Aucun", emoji: "—" },
   { type: "sun", label: "Soleil", emoji: "☀️" },
+  { type: "cloudy", label: "Nuageux", emoji: "⛅" },
   { type: "rain", label: "Pluie", emoji: "🌧️" },
   { type: "storm", label: "Orage", emoji: "⛈️" },
   { type: "snow", label: "Neige", emoji: "❄️" },
@@ -165,7 +166,18 @@ export const WeatherControls = (props: {
             <WeatherBtn
               key={opt.type}
               isActive={weather.type === opt.type}
-              onClick={() => apply({ type: opt.type })}
+              onClick={() =>
+                apply({
+                  type: opt.type,
+                  ...(opt.type === "moon" && weather.type !== "moon"
+                    ? { windAngle: 0.7 }
+                    : opt.type === "cloudy" && weather.type !== "cloudy"
+                    ? { windAngle: 0.6 }
+                    : opt.type === "wind" && weather.type !== "wind"
+                    ? { windAngle: -30 }
+                    : {}),
+                })
+              }
             >
               <span className="emoji">{opt.emoji}</span>
               <span>{opt.label}</span>
@@ -177,7 +189,9 @@ export const WeatherControls = (props: {
           <>
             <SliderRow>
               <SliderLabel>
-                <span>Intensité</span>
+                <span>
+                  {weather.type === "moon" ? "Assombrissement" : "Intensité"}
+                </span>
                 <span className="value">
                   {Math.round(weather.intensity * 100)}%
                 </span>
@@ -194,26 +208,76 @@ export const WeatherControls = (props: {
               />
             </SliderRow>
 
-            {weather.type !== "sun" && weather.type !== "moon" && (
+            {weather.type === "moon" && (
               <SliderRow>
                 <SliderLabel>
-                  <span>Direction du vent</span>
+                  <span>Effets (étoiles & brume)</span>
                   <span className="value">
-                    {Math.round(weather.windAngle)}°
+                    {Math.round(
+                      Math.max(0, Math.min(1, weather.windAngle)) * 100
+                    )}
+                    %
                   </span>
                 </SliderLabel>
                 <SliderInput
                   type="range"
-                  min={-60}
-                  max={60}
-                  step={5}
-                  value={weather.windAngle}
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  value={Math.max(0, Math.min(1, weather.windAngle))}
                   onChange={(e) =>
                     apply({ windAngle: parseFloat(e.target.value) })
                   }
                 />
               </SliderRow>
             )}
+
+            {weather.type === "cloudy" && (
+              <SliderRow>
+                <SliderLabel>
+                  <span>Ombrage</span>
+                  <span className="value">
+                    {Math.round(
+                      Math.max(0, Math.min(1, weather.windAngle)) * 100
+                    )}
+                    %
+                  </span>
+                </SliderLabel>
+                <SliderInput
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  value={Math.max(0, Math.min(1, weather.windAngle))}
+                  onChange={(e) =>
+                    apply({ windAngle: parseFloat(e.target.value) })
+                  }
+                />
+              </SliderRow>
+            )}
+
+            {weather.type !== "sun" &&
+              weather.type !== "moon" &&
+              weather.type !== "cloudy" && (
+                <SliderRow>
+                  <SliderLabel>
+                    <span>Direction du vent</span>
+                    <span className="value">
+                      {Math.round(weather.windAngle)}°
+                    </span>
+                  </SliderLabel>
+                  <SliderInput
+                    type="range"
+                    min={-60}
+                    max={60}
+                    step={5}
+                    value={weather.windAngle}
+                    onChange={(e) =>
+                      apply({ windAngle: parseFloat(e.target.value) })
+                    }
+                  />
+                </SliderRow>
+              )}
           </>
         )}
       </Container>

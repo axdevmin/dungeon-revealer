@@ -399,6 +399,7 @@ enum WeatherType {
   sun
   moon
   wind
+  cloudy
 }
 
 type Mutation {
