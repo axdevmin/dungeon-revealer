@@ -334,7 +334,10 @@ const PlayerMap = ({
         )
       ) : (
         <AbsoluteFullscreenContainer>
-          <SplashScreen text="En attente d'une carte..." />
+          <SplashScreen
+            text="En attente d'une carte..."
+            tagline="Plateau des Joueurs"
+          />
         </AbsoluteFullscreenContainer>
       )}
     </>
@@ -428,7 +431,7 @@ export const PlayerArea: React.FC<{
   );
 
   if (mode === "LOADING") {
-    return <SplashScreen text="Chargement..." />;
+    return <SplashScreen text="Chargement..." tagline="Plateau des Joueurs" />;
   }
 
   if (mode === "AUTHENTICATE") {

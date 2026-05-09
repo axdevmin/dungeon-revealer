@@ -68,11 +68,14 @@ const LoadingBar = styled.div`
   }
 `;
 
-export const SplashScreen: React.FC<{ text?: string }> = ({ text = null }) => {
+export const SplashScreen: React.FC<{ text?: string; tagline?: string }> = ({
+  text = null,
+  tagline,
+}) => {
   return (
     <BackgroundImageContainer>
       <div>
-        <BrandLogoText />
+        <BrandLogoText tagline={tagline} />
         {text ? (
           <>
             <SplashText>

@@ -24,9 +24,13 @@ const Tagline = styled.div`
   margin-bottom: 48px;
 `;
 
-export const BrandLogoText = () => (
+export const BrandLogoText = ({
+  tagline = "Maître du Donjon",
+}: {
+  tagline?: string;
+}) => (
   <>
     <Heading>Navis</Heading>
-    <Tagline>Maître du Donjon</Tagline>
+    <Tagline>{tagline}</Tagline>
   </>
 );

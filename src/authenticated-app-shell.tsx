@@ -295,16 +295,20 @@ export const AuthenticatedAppShell: React.FC<{
     };
   }, [socket, password, role]);
 
+  const tagline = role === "Player" ? "Plateau des Joueurs" : undefined;
+
   if (connectionMode === "connecting" || connectionMode === "connected") {
-    return <SplashScreen text="Connexion..." />;
+    return <SplashScreen text="Connexion..." tagline={tagline} />;
   }
 
   if (connectionMode === "authenticating") {
-    return <SplashScreen text="Authentification..." />;
+    return <SplashScreen text="Authentification..." tagline={tagline} />;
   }
 
   if (connectionMode === "disconnected") {
-    return <SplashScreen text="Connexion perdue. Reconnexion..." />;
+    return (
+      <SplashScreen text="Connexion perdue. Reconnexion..." tagline={tagline} />
+    );
   }
 
   return (
