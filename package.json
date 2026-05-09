@@ -1,7 +1,7 @@
 {
-  "name": "dungeon-revealer",
-  "version": "2.0.2",
-  "description": "dungeon-revealer ================",
+  "name": "navis",
+  "version": "2.0.0",
+  "description": "Navis - RPG Map Sharing System",
   "bugs": {
     "url": "https://github.com/dungeon-revealer/dungeon-revealer/issues"
   },
@@ -12,7 +12,7 @@
   "license": "ISC",
   "author": "apclary",
   "main": "app.js",
-  "bin": "bin/dungeon-revealer",
+  "bin": "bin/navis",
   "scripts": {
     "prebuild": "node scripts/prebuild.js",
     "build:frontend": "node scripts/copy-monaco-editor-files.js && npm run relay-compiler && vite build --base=./",
@@ -23,7 +23,7 @@
     "eslint": "eslint --ignore-path .gitignore --max-warnings 0 \"**/*.js\" \"bin/dungeon-revealer\"",
     "postinstall": "patch-package",
     "setup": "npm run write-schema && npm run relay-compiler",
-    "start": "node ./bin/dungeon-revealer",
+    "start": "node ./bin/navis",
     "test": "jest --passWithNoTests",
     "start:frontend:dev": "vite",
     "start:server:dev": "ts-node-dev --project server/tsconfig.json --no-deps server/index.ts",

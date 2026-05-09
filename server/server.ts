@@ -228,8 +228,13 @@ export const bootstrapServer = async (env: ReturnType<typeof getEnv>) => {
     res.send(indexHtmlContent);
   });
 
-  app.get("/dm", (_, res) => {
+  app.get("/mj", (_, res) => {
     res.send(indexHtmlContent);
+  });
+
+  // Deprecated route for backwards compatibility
+  app.get("/dm", (_, res) => {
+    res.redirect("/mj");
   });
 
   app.get("/mj", (_, res) => {

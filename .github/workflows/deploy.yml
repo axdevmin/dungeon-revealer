@@ -38,22 +38,22 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           timeout: 30m
           script: |
-            cd dungeon-revealer
+            cd navis
             git pull origin master
 
-            sudo docker build -t dungeon-revealer .
+            sudo docker build -t navis .
 
-            sudo docker stop dungeon-revealer || true
-            sudo docker rm dungeon-revealer || true
+            sudo docker stop navis || true
+            sudo docker rm navis || true
 
             sudo docker run -d \
-              --name dungeon-revealer \
+              --name navis \
               --restart always \
               -p 3000:3000 \
-              -v /home/ubuntu/dungeon-data:/var/data/dungeon-revealer \
-              -e DATA_DIRECTORY=/var/data/dungeon-revealer \
+              -v /home/ubuntu/dungeon-data:/var/data/navis \
+              -e DATA_DIRECTORY=/var/data/navis \
               -e DM_PASSWORD='${{ secrets.DM_PASSWORD }}' \
               -e PC_PASSWORD='${{ secrets.PC_PASSWORD }}' \
-              dungeon-revealer
+              navis
 
             sudo docker image prune -f

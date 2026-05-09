@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: dungeon-revealer
+    name: navis
     runtime: node
     buildCommand: npm install && npm run build
     startCommand: node server-build/index.js
@@ -11,9 +11,9 @@ services:
       - key: PORT
         value: 3000
       - key: DATA_DIRECTORY
-        value: /var/data/dungeon-revealer
+        value: /var/data/navis
     volumes:
-      - path: /var/data/dungeon-revealer
-        name: dungeon-revealer-data
+      - path: /var/data/navis
+        name: navis-data
     healthCheckPath: /
     autoDeploy: true

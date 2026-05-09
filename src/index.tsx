@@ -34,6 +34,15 @@ const pathname = window.location.pathname.replace(getUrlPrefix(), "");
 
 const urlSearchParameter = new URLSearchParams(window.location.search);
 
+// Set page title based on role
+const setPageTitle = (pathname: string) => {
+  if (pathname === "/mj") {
+    document.title = "Navis (MJ)";
+  } else {
+    document.title = "Navis (Joueur)";
+  }
+};
+
 const main = async () => {
   let component = null;
   try {
@@ -75,6 +84,7 @@ const main = async () => {
       </ErrorBoundary>
     );
   }
+  setPageTitle(pathname);
   if (element) {
     render(
       <CacheProvider value={emotionCache}>

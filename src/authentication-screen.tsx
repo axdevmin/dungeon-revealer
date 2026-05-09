@@ -169,7 +169,7 @@ export const AuthenticationScreen: React.FC<{
           {isLoading ? "Connexion..." : "Se connecter"}
         </SubmitButton>
       </Form>
-      <SwitchLink href={requiredRole === "DM" ? "/" : "/dm"}>
+      <SwitchLink href={requiredRole === "DM" ? "/" : "/mj"}>
         {requiredRole === "DM" ? "→ Section joueurs" : "→ Section MJ"}
       </SwitchLink>
     </BackgroundImageContainer>
