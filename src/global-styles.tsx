@@ -162,4 +162,35 @@ export const globalStyles = css`
     text-transform: uppercase !important;
     letter-spacing: 0.06em !important;
   }
+
+  /* Chakra UI Menu dark theme overrides */
+  .chakra-menu__menulist {
+    background-color: #1a1a2e !important;
+    border: 1px solid #333366 !important;
+    border-radius: 6px !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6) !important;
+    padding: 4px !important;
+    min-width: 160px !important;
+  }
+
+  .chakra-menu__menuitem {
+    background-color: transparent !important;
+    color: #ddddff !important;
+    border-radius: 4px !important;
+    font-size: 13px !important;
+    padding: 7px 12px !important;
+    transition: background 0.12s !important;
+  }
+
+  .chakra-menu__menuitem:hover,
+  .chakra-menu__menuitem:focus {
+    background-color: #2a2a4e !important;
+    color: #ffffff !important;
+  }
+
+  .chakra-menu__menuitem[aria-disabled="true"],
+  .chakra-menu__menuitem:disabled {
+    opacity: 0.35 !important;
+    cursor: not-allowed !important;
+  }
 `;

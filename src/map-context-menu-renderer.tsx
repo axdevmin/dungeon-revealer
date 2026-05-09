@@ -42,6 +42,8 @@ const MapFragment = graphql`
       isVisibleForPlayers
       isMovableByPlayers
       isLocked
+      tokenType
+      isAlive
       tokenImage {
         id
       }
@@ -63,6 +65,8 @@ export const ContextMenuRenderer = (props: {
           hits.set(token.id, {
             ...token,
             tokenImageId: token.tokenImage?.id ?? null,
+            tokenType: (token.tokenType as any) ?? "marker",
+            isAlive: token.isAlive ?? true,
             reference: token.referenceId
               ? {
                   id: token.referenceId,

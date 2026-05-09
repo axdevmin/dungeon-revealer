@@ -335,6 +335,8 @@ module.exports = ({ roleMiddleware, maps, settings, emitter }) => {
         description: req.body.description,
         reference: req.body.reference,
         tokenImageId: req.body.tokenImageId,
+        tokenType: req.body.tokenType,
+        isAlive: req.body.isAlive,
       };
     }
 

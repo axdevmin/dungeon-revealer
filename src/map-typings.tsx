@@ -1,3 +1,10 @@
+export type TokenType =
+  | "character"
+  | "creature"
+  | "object"
+  | "hazard"
+  | "marker";
+
 export type MapGridEntity = {
   color: string;
   offsetX: number;
@@ -17,6 +24,8 @@ export type MapTokenEntity = {
   isVisibleForPlayers: boolean;
   isMovableByPlayers: boolean;
   isLocked: boolean;
+  isAlive: boolean;
+  tokenType: TokenType;
   reference: null | {
     type: "note";
     id: string;

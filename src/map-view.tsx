@@ -25,7 +25,7 @@ import type {
   SharedMapToolState,
 } from "./map-tools/map-tool";
 import { useContextBridge } from "./hooks/use-context-bridge";
-import { MapGridEntity, MapTokenEntity } from "./map-typings";
+import { MapGridEntity, MapTokenEntity, TokenType } from "./map-typings";
 import { useIsKeyPressed } from "./hooks/use-is-key-pressed";
 import * as Icon from "./feather-icons";
 import { TextureLoader } from "three";
@@ -56,6 +56,14 @@ import type { WeatherSettings } from "./weather-types";
 import { APP_VERSION } from "./version";
 
 type Vector2D = [number, number];
+
+const TOKEN_TYPE_COLORS: Record<TokenType, string> = {
+  character: "#4488ff",
+  creature: "#ff4444",
+  object: "#ffaa33",
+  hazard: "#ff6633",
+  marker: "#aa44ff",
+};
 
 enum LayerRenderOrder {
   map = 0,
@@ -200,6 +208,8 @@ const TokenRendererMapTokenFragment = graphql`
     isLocked
     isMovableByPlayers
     isVisibleForPlayers
+    tokenType
+    isAlive
     tokenImage {
       id
       title
@@ -455,6 +465,37 @@ const TokenRenderer = (props: {
         },
         transient: false,
       }),
+      tokenType: {
+        type: LevaInputs.SELECT,
+        label: "Type",
+        value: token.tokenType ?? "marker",
+        options: {
+          "👤 Personnage": "character",
+          "👹 Créature": "creature",
+          "📦 Objet": "object",
+          "⚠️ Danger": "hazard",
+          "📍 Marqueur": "marker",
+        },
+        onChange: (tokenType: TokenType, _, { initial, fromPanel }) => {
+          if (initial || !fromPanel) {
+            return;
+          }
+          updateToken(props.id, { tokenType });
+        },
+        transient: false,
+      },
+      isAlive: {
+        type: LevaInputs.BOOLEAN,
+        label: "Vivant",
+        value: token.isAlive ?? true,
+        onChange: (isAlive: boolean, _, { initial, fromPanel }) => {
+          if (initial || !fromPanel) {
+            return;
+          }
+          updateToken(props.id, { isAlive });
+        },
+        transient: false,
+      },
     }),
     { store }
   );
@@ -476,6 +517,8 @@ const TokenRenderer = (props: {
       isVisibleForPlayers: token.isVisibleForPlayers,
       referenceId: token.referenceId,
       tokenImageId: token.tokenImage?.id ?? null,
+      tokenType: token.tokenType ?? "marker",
+      isAlive: token.isAlive ?? true,
     };
 
     if (editingStateRef.radius === 0) {
@@ -505,6 +548,8 @@ const TokenRenderer = (props: {
     token.referenceId,
     token.tokenImage?.id,
     token.rotation,
+    token.tokenType,
+    token.isAlive,
   ]);
 
   const initialRadius = useStaticRef(() =>
@@ -705,6 +750,12 @@ const TokenRenderer = (props: {
   const color =
     isHover && isMovable ? lighten(0.1, values.color) : values.color;
   const textLabel = values.text;
+  const tokenType = (values.tokenType as TokenType) ?? "marker";
+  const isAlive = values.isAlive ?? true;
+  const typeRingColor = TOKEN_TYPE_COLORS[tokenType] ?? "#aa44ff";
+  const baseOpacity = values.isVisibleForPlayers ? 1 : 0.5;
+  const deadOpacity = isAlive ? baseOpacity : baseOpacity * 0.4;
+
   return (
     <>
       <animated.group
@@ -721,11 +772,12 @@ const TokenRenderer = (props: {
               />
               <meshStandardMaterial
                 attach="material"
-                color={color}
+                color={isAlive ? color : "#888888"}
                 transparent={true}
-                opacity={values.isVisibleForPlayers ? 1 : 0.5}
+                opacity={deadOpacity}
               />
             </mesh>
+            {/* Inner border — darkened fill color */}
             <mesh>
               <ringBufferGeometry
                 attach="geometry"
@@ -734,17 +786,31 @@ const TokenRenderer = (props: {
               <meshStandardMaterial
                 attach="material"
                 color={darken(0.1, color)}
-                opacity={values.isVisibleForPlayers ? 1 : 0.5}
+                opacity={deadOpacity}
                 transparent={true}
               />
             </mesh>
           </>
         )}
+        {/* Type-colored outer ring */}
+        <mesh renderOrder={LayerRenderOrder.token}>
+          <ringBufferGeometry
+            attach="geometry"
+            args={[initialRadius * 1.0, initialRadius * 1.12, 128]}
+          />
+          <meshStandardMaterial
+            attach="material"
+            color={typeRingColor}
+            opacity={deadOpacity}
+            transparent={true}
+          />
+        </mesh>
+        {/* Selection highlight */}
         {tokenSelection.isSelected ? (
           <mesh renderOrder={LayerRenderOrder.outline}>
             <ringBufferGeometry
               attach="geometry"
-              args={[initialRadius * (1 - 0.05), initialRadius, 128]}
+              args={[initialRadius * 1.12, initialRadius * 1.22, 128]}
             />
             <meshStandardMaterial
               attach="material"
@@ -759,13 +825,45 @@ const TokenRenderer = (props: {
             initialRadius={initialRadius}
             dragProps={dragProps}
             isHover={isHover}
-            opacity={values.isVisibleForPlayers ? 1 : 0.5}
+            opacity={deadOpacity}
             rotation={animatedProps.rotation}
           />
         ) : null}
+        {/* Dead state — red X cross */}
+        {!isAlive ? (
+          <>
+            <mesh renderOrder={LayerRenderOrder.outline}>
+              <planeBufferGeometry
+                attach="geometry"
+                args={[initialRadius * 1.6, initialRadius * 0.12, 1]}
+              />
+              <meshStandardMaterial
+                attach="material"
+                color="#cc0000"
+                transparent={true}
+                opacity={deadOpacity + 0.3}
+              />
+            </mesh>
+            <mesh
+              rotation={[0, 0, Math.PI / 2]}
+              renderOrder={LayerRenderOrder.outline}
+            >
+              <planeBufferGeometry
+                attach="geometry"
+                args={[initialRadius * 1.6, initialRadius * 0.12, 1]}
+              />
+              <meshStandardMaterial
+                attach="material"
+                color="#cc0000"
+                transparent={true}
+                opacity={deadOpacity + 0.3}
+              />
+            </mesh>
+          </>
+        ) : null}
         {values.tokenImageId && token.tokenImage ? null : (
           <mesh {...dragProps()} renderOrder={LayerRenderOrder.tokenGesture}>
-            {/* This one is for attaching the gesture handlers */}
+            {/* Invisible hit-detection mesh */}
             <circleBufferGeometry
               attach="geometry"
               args={[initialRadius, 128]}

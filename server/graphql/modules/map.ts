@@ -10,6 +10,7 @@ import {
   MapEntity,
   MapGridEntity,
   MapTokenEntity,
+  TokenType,
   WeatherSettings,
   WeatherType,
 } from "../../maps";
@@ -47,6 +48,18 @@ const GraphQLMediaTypeEnum = t.enumType<MediaType>({
       value: "video-url" as const,
       description: "Video URL (YouTube, Vimeo, etc.)",
     },
+  ],
+});
+
+const GraphQLTokenTypeEnum = t.enumType<TokenType>({
+  name: "TokenType",
+  description: "The type of token placed on the map.",
+  values: [
+    { name: "character", value: "character" as const },
+    { name: "creature", value: "creature" as const },
+    { name: "object", value: "object" as const },
+    { name: "hazard", value: "hazard" as const },
+    { name: "marker", value: "marker" as const },
   ],
 });
 
@@ -129,6 +142,14 @@ const GraphQLMapTokenUpdateManyPropertiesInput = t.inputObjectType({
       description:
         "Rotation to be updated. Will not be updated if null is provided.",
     },
+    tokenType: {
+      type: GraphQLTokenTypeEnum,
+      description: "Token type to be updated.",
+    },
+    isAlive: {
+      type: t.Boolean,
+      description: "Whether the token is alive. Applies to character/creature.",
+    },
   }),
 });
 
@@ -178,6 +199,8 @@ const GraphQLMapTokenAddManyTokenInput = t.inputObjectType({
     isMovableByPlayers: t.arg(t.Boolean),
     isLocked: t.arg(t.Boolean),
     tokenImageId: t.arg(t.ID),
+    tokenType: t.arg(GraphQLTokenTypeEnum),
+    isAlive: t.arg(t.Boolean),
   }),
 });
 
@@ -406,6 +429,8 @@ export const mutationFields = [
               input.properties.isMovableByPlayers ?? undefined,
             tokenImageId: input.properties.tokenImageId,
             rotation: input.properties.rotation ?? undefined,
+            tokenType: (input.properties.tokenType as TokenType) ?? undefined,
+            isAlive: input.properties.isAlive ?? undefined,
           },
         }),
         context
@@ -669,6 +694,16 @@ const GraphQLMapTokenType = t.objectType<MapTokenEntity>({
       name: "referenceId",
       type: t.ID,
       resolve: (source) => source.reference?.id ?? null,
+    }),
+    t.field({
+      name: "tokenType",
+      type: t.NonNull(GraphQLTokenTypeEnum),
+      resolve: (source) => source.tokenType ?? "marker",
+    }),
+    t.field({
+      name: "isAlive",
+      type: t.NonNull(t.Boolean),
+      resolve: (source) => source.isAlive ?? true,
     }),
   ],
 });
