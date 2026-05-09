@@ -19,17 +19,53 @@ In order to allow players and even other DMs to remotely access to your installa
 
 #### Deploying on Oracle Cloud Free Tier (Always-On, Free)
 
-Oracle Cloud offers a permanently free VM (VM.Standard.E2.1.Micro) sufficient for small group sessions (2–6 players).
+Oracle Cloud offers a permanently free VM (VM.Standard.E2.1.Micro) that is sufficient for small group sessions (2–6 players) and stays online 24/7 without any cost.
+
+---
+
+**Architecture overview**
+
+The VPS is a low-resource machine (1 vCPU, 1 GB RAM). Compiling the application directly on it would take hours. Instead, we use the following split:
+
+- **GitHub Actions** (powerful runner) — builds the Docker image and pushes it to Docker Hub
+- **Oracle VPS** (low-resource) — only pulls the pre-built image from Docker Hub and runs it
+
+This keeps deployments fast (~10–15 min total) and reliable.
+
+```
+push to master
+      │
+      ▼
+① Bump version  (GitHub Actions)
+      │
+      ▼
+② Build Docker image  (GitHub Actions — fast)
+      │
+      ▼
+③ Push image to Docker Hub
+      │
+      ▼
+④ SSH → VPS → docker pull + restart  (~1 min)
+      │
+      ▼
+✅  App updated at https://your-domain.duckdns.org
+```
+
+---
 
 **Prerequisites**
 
 - Oracle Cloud account with a free VM running Ubuntu 20.04+
-- A reserved public IPv4 attached to the VM
-- A free DuckDNS subdomain pointing to your IP
-- Docker installed on the VM
-- Ports 22, 80, 443 open in Oracle Cloud security list and Ubuntu iptables
+- A reserved (static) public IPv4 attached to the VM
+- A free [DuckDNS](https://www.duckdns.org) subdomain pointing to your IP
+- Ports 22, 80 and 443 open in the Oracle Cloud security list **and** in Ubuntu's iptables
+- A free [Docker Hub](https://hub.docker.com) account to host the image
 
-**Install Docker**
+---
+
+**Step 1 — Install Docker on the VPS**
+
+Connect via SSH, then run:
 
 ```bash
 sudo apt-get update
@@ -38,42 +74,47 @@ curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o 
 echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu focal stable" | sudo tee /etc/apt/sources.list.d/docker.list
 sudo apt-get update
 sudo apt-get install -y docker-ce docker-ce-cli containerd.io
-sudo usermod -aG docker $USER
 ```
 
-**Build and run the container**
+---
+
+**Step 2 — Run the container for the first time**
+
+Pull the image from Docker Hub and start the container:
 
 ```bash
-git clone https://github.com/YOUR_USER/dungeon-revealer.git
-cd dungeon-revealer
-git checkout YOUR_BRANCH
-sudo docker build -t dungeon-revealer .
+sudo docker pull your-dockerhub-user/navis:latest
 
 sudo docker run -d \
-  --name dungeon-revealer \
+  --name navis \
   --restart always \
   -p 3000:3000 \
-  -v /home/ubuntu/dungeon-data:/var/data/dungeon-revealer \
-  -e DATA_DIRECTORY=/var/data/dungeon-revealer \
+  -v /home/ubuntu/navis-data:/var/data/navis \
+  -e DATA_DIRECTORY=/var/data/navis \
   -e DM_PASSWORD='your-dm-password' \
   -e PC_PASSWORD='your-pc-password' \
-  dungeon-revealer
+  your-dockerhub-user/navis:latest
 ```
 
-> **Important:** Always use `-v` to mount a host directory to `/var/data/dungeon-revealer` and set `DATA_DIRECTORY` to the same path. This ensures maps, tokens and notes persist across container restarts and redeployments.
+> **Data persistence:** The `-v /home/ubuntu/navis-data:/var/data/navis` flag mounts a folder from the host into the container. All maps, tokens and notes are stored there and will survive container restarts or image updates. Never omit this flag.
 
-**Set up HTTPS with nginx + Let's Encrypt**
+---
+
+**Step 3 — Set up HTTPS with nginx + Let's Encrypt**
+
+nginx acts as a reverse proxy in front of the app and Let's Encrypt provides a free SSL certificate that renews automatically every 90 days.
 
 ```bash
 sudo apt-get install -y nginx certbot python3-certbot-nginx
 
-# Open firewall ports
+# Make sure ports 80 and 443 are open in the firewall
+sudo apt-get install -y iptables-persistent
 sudo iptables -I INPUT -p tcp --dport 80 -j ACCEPT
 sudo iptables -I INPUT -p tcp --dport 443 -j ACCEPT
 sudo iptables-save | sudo tee /etc/iptables/rules.v4
 
-# Configure nginx
-sudo tee /etc/nginx/sites-available/dungeon-revealer > /dev/null << 'EOF'
+# Create the nginx configuration for the app
+sudo tee /etc/nginx/sites-available/navis > /dev/null << 'EOF'
 server {
     listen 80;
     server_name your-domain.duckdns.org;
@@ -89,32 +130,46 @@ server {
 }
 EOF
 
-sudo ln -sf /etc/nginx/sites-available/dungeon-revealer /etc/nginx/sites-enabled/
+sudo ln -sf /etc/nginx/sites-available/navis /etc/nginx/sites-enabled/
 sudo rm -f /etc/nginx/sites-enabled/default
 sudo nginx -t && sudo systemctl restart nginx
 
-# Generate SSL certificate (auto-renews every 90 days)
+# Request the SSL certificate — certbot will automatically update the nginx config for HTTPS
 sudo certbot --nginx -d your-domain.duckdns.org --non-interactive --agree-tos -m your@email.com
 ```
 
-**Updating the application**
+The app is now accessible at:
 
-```bash
-ssh your-vps
-cd dungeon-revealer
-git pull
-sudo docker build -t dungeon-revealer .
-sudo docker stop dungeon-revealer && sudo docker rm dungeon-revealer
-sudo docker run -d \
-  --name dungeon-revealer \
-  --restart always \
-  -p 3000:3000 \
-  -v /home/ubuntu/dungeon-data:/var/data/dungeon-revealer \
-  -e DATA_DIRECTORY=/var/data/dungeon-revealer \
-  -e DM_PASSWORD='your-dm-password' \
-  -e PC_PASSWORD='your-pc-password' \
-  dungeon-revealer
-```
+- `https://your-domain.duckdns.org` — Player view
+- `https://your-domain.duckdns.org/mj` — Dungeon Master view
+
+---
+
+**Step 4 — Set up automatic deployment (GitHub Actions)**
+
+Two workflow files handle CI/CD:
+
+| Pipeline                                 | File         | Purpose                                                         | Triggered by           |
+| ---------------------------------------- | ------------ | --------------------------------------------------------------- | ---------------------- |
+| **[Auto] Build, Push & Deploy to VPS**   | `deploy.yml` | Bump version + build image + push to Docker Hub + deploy to VPS | Every push to `master` |
+| **[Manual] Build and Push Docker Image** | `docker.yml` | Build and push image only, no deployment                        | Manual trigger only    |
+
+**Why two pipelines?**
+
+**[Manual] Build and Push Docker Image** is kept for manual use — for example, to force a fresh image rebuild without pushing any code change. On a normal push to `master`, only **[Auto] Build, Push & Deploy to VPS** runs. It already includes the build and push steps internally, so triggering both at the same time would build the exact same image twice in parallel, wasting time and GitHub Actions minutes.
+
+Add the following secrets to your GitHub repository under **Settings → Secrets and variables → Actions**:
+
+| Secret               | Description                                   |
+| -------------------- | --------------------------------------------- |
+| `VPS_HOST`           | Public IP address of the Oracle VM            |
+| `VPS_SSH_KEY`        | Private SSH key used to connect to the VM     |
+| `DOCKERHUB_USERNAME` | Your Docker Hub username                      |
+| `DOCKERHUB_TOKEN`    | A Docker Hub access token (not your password) |
+| `DM_PASSWORD`        | Password for the Dungeon Master interface     |
+| `PC_PASSWORD`        | Password for the player interface             |
+
+Once the secrets are set, every merge to `master` will automatically build, push and deploy the new version. The VPS itself never compiles anything — it only pulls the ready-made image.
 
 ### Usage with Reverse Proxy
 
