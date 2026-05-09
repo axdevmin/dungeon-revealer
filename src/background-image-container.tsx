@@ -1,16 +1,7 @@
 import React from "react";
 import styled from "@emotion/styled/macro";
 import { ds } from "./design-system";
-
-// Ajoutez des images dans public/images/backgrounds/ et listez-les ici.
-// Elles s'afficheront en rotation aléatoire à chaque chargement.
-const BACKGROUND_IMAGES = [
-  "/images/backgrounds/navis-background.jpg",
-  "/images/backgrounds/dungeon-entrance.jpg",
-];
-
-const pickRandom = (arr: string[]): string =>
-  arr[Math.floor(Math.random() * arr.length)];
+import { useRandomBackground } from "./hooks/use-random-background";
 
 export const Container = styled.div<{ bgImage: string }>`
   height: 100vh;
@@ -45,7 +36,7 @@ const Inner = styled.div`
 `;
 
 export const BackgroundImageContainer: React.FC<{}> = ({ children }) => {
-  const bgImage = React.useMemo(() => pickRandom(BACKGROUND_IMAGES), []);
+  const bgImage = useRandomBackground();
   return (
     <Container bgImage={bgImage}>
       <Inner>{children}</Inner>
