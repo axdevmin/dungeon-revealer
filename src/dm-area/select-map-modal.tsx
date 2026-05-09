@@ -108,6 +108,9 @@ const SelectMapModal_MapCreateMutation = graphql`
           id
           title
           mapImageUrl
+          weatherSettings {
+            type
+          }
         }
       }
       ... on MapCreateError {
@@ -442,6 +445,9 @@ export const SelectMapModal = ({
                 id
                 title
                 mapImageUrl
+                weatherSettings {
+                  type
+                }
               }
             }
             ... on MapCreateError {
