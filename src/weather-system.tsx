@@ -282,6 +282,135 @@ const SnowSystem = React.memo(
   }
 );
 
+// ─── WIND ────────────────────────────────────────────────────────────────────
+
+const WIND_BURST_COUNT = 300;
+
+function spawnWindGust(
+  pos: Float32Array,
+  vel: Float32Array,
+  i: number,
+  bounds: { w: number; h: number },
+  windAngle: number,
+  gusts: number
+) {
+  const { wx, wy } = windComponents(windAngle);
+  const speed = 0.02 + Math.random() * 0.01;
+  const gustIntensity = 0.5 + 0.5 * Math.sin(gusts * 0.3 + i * 0.1);
+
+  const vx = wx * speed * gustIntensity;
+  const vy = wy * speed * gustIntensity * 0.3 + (Math.random() - 0.5) * 0.002;
+
+  const len = (0.02 + Math.random() * 0.015) * bounds.h;
+  const norm = Math.sqrt(vx * vx + vy * vy) || 1;
+  const dx = (vx / norm) * len;
+  const dy = (vy / norm) * len;
+
+  const x = (Math.random() - 0.5) * bounds.w;
+  const y = (Math.random() - 0.5) * bounds.h;
+
+  pos[i * 6 + 0] = x;
+  pos[i * 6 + 1] = y;
+  pos[i * 6 + 2] = 0;
+  pos[i * 6 + 3] = x + dx;
+  pos[i * 6 + 4] = y + dy;
+  pos[i * 6 + 5] = 0;
+
+  vel[i * 2 + 0] = vx;
+  vel[i * 2 + 1] = vy;
+}
+
+const WindSystem = React.memo(
+  ({
+    config,
+    dimensions,
+    clippingPlanes,
+  }: {
+    config: WeatherConfig;
+    dimensions: WeatherDimensions;
+    clippingPlanes: THREE.Plane[];
+  }) => {
+    const geomRef = React.useRef<THREE.BufferGeometry>(null);
+    const posRef = React.useRef(new Float32Array(WIND_BURST_COUNT * 6));
+    const velRef = React.useRef(new Float32Array(WIND_BURST_COUNT * 2));
+    const bounds = { w: dimensions.width, h: dimensions.height };
+
+    React.useEffect(() => {
+      const t = Date.now() * 0.001;
+      for (let i = 0; i < WIND_BURST_COUNT; i++) {
+        spawnWindGust(
+          posRef.current,
+          velRef.current,
+          i,
+          bounds,
+          config.windAngle,
+          t
+        );
+      }
+      if (geomRef.current) {
+        geomRef.current.setAttribute(
+          "position",
+          new THREE.BufferAttribute(posRef.current, 3)
+        );
+      }
+    }, [config.type]);
+
+    useFrame(() => {
+      if (!geomRef.current) return;
+      const p = posRef.current;
+      const v = velRef.current;
+      const { wx } = windComponents(config.windAngle);
+      const t = Date.now() * 0.001;
+      const gustFactor = 0.5 + 0.5 * Math.sin(t * 0.7);
+      const speed = config.intensity * gustFactor;
+
+      for (let i = 0; i < WIND_BURST_COUNT; i++) {
+        p[i * 6 + 0] += v[i * 2] * speed;
+        p[i * 6 + 1] += v[i * 2 + 1] * speed;
+        p[i * 6 + 3] += v[i * 2] * speed;
+        p[i * 6 + 4] += v[i * 2 + 1] * speed;
+
+        const px = p[i * 6];
+        const py = p[i * 6 + 1];
+        if (
+          py < -bounds.h * 0.6 ||
+          py > bounds.h * 0.6 ||
+          px < -bounds.w * 0.6 ||
+          px > bounds.w * 0.6
+        ) {
+          spawnWindGust(p, v, i, bounds, config.windAngle, t);
+        }
+      }
+
+      (
+        geomRef.current.attributes.position as THREE.BufferAttribute
+      ).needsUpdate = true;
+    });
+
+    return (
+      <lineSegments renderOrder={8}>
+        <bufferGeometry ref={geomRef}>
+          <bufferAttribute
+            attachObject={["attributes", "position"]}
+            array={posRef.current}
+            count={WIND_BURST_COUNT * 2}
+            itemSize={3}
+            usage={THREE.DynamicDrawUsage}
+          />
+        </bufferGeometry>
+        <lineBasicMaterial
+          color={0xccccdd}
+          transparent
+          opacity={0.4 * config.intensity}
+          depthWrite={false}
+          depthTest={false}
+          clippingPlanes={clippingPlanes}
+        />
+      </lineSegments>
+    );
+  }
+);
+
 // ─── LIGHTNING ───────────────────────────────────────────────────────────────
 
 const LightningOverlay = ({
@@ -336,11 +465,71 @@ const SunOverlay = ({
   dimensions: WeatherDimensions;
 }) => {
   const meshRef = React.useRef<THREE.Mesh>(null);
+  const haloRef = React.useRef<THREE.Mesh>(null);
 
   useFrame(({ clock }) => {
     if (!meshRef.current) return;
+    const time = clock.getElapsedTime();
+    const basePulse = 0.08 + 0.05 * Math.sin(time * 0.4);
     (meshRef.current.material as THREE.MeshBasicMaterial).opacity =
-      (0.06 + 0.03 * Math.sin(clock.getElapsedTime() * 0.4)) * intensity;
+      basePulse * intensity;
+
+    if (haloRef.current) {
+      const haloPulse = 0.04 + 0.03 * Math.sin(time * 0.3 + 0.5);
+      (haloRef.current.material as THREE.MeshBasicMaterial).opacity =
+        haloPulse * intensity;
+    }
+  });
+
+  return (
+    <>
+      <mesh ref={meshRef} renderOrder={8}>
+        <planeBufferGeometry
+          attach="geometry"
+          args={[dimensions.width, dimensions.height]}
+        />
+        <meshBasicMaterial
+          attach="material"
+          color={0xffdd66}
+          transparent
+          opacity={0.07 * intensity}
+          depthWrite={false}
+          depthTest={false}
+        />
+      </mesh>
+      <mesh ref={haloRef} renderOrder={7}>
+        <planeBufferGeometry
+          attach="geometry"
+          args={[dimensions.width * 1.3, dimensions.height * 1.3]}
+        />
+        <meshBasicMaterial
+          attach="material"
+          color={0xffffaa}
+          transparent
+          opacity={0.03 * intensity}
+          depthWrite={false}
+          depthTest={false}
+        />
+      </mesh>
+    </>
+  );
+};
+
+// ─── MOON ────────────────────────────────────────────────────────────────────
+
+const MoonOverlay = ({
+  intensity,
+  dimensions,
+}: {
+  intensity: number;
+  dimensions: WeatherDimensions;
+}) => {
+  const meshRef = React.useRef<THREE.Mesh>(null);
+
+  useFrame(() => {
+    if (!meshRef.current) return;
+    (meshRef.current.material as THREE.MeshBasicMaterial).opacity =
+      0.25 * intensity;
   });
 
   return (
@@ -351,9 +540,9 @@ const SunOverlay = ({
       />
       <meshBasicMaterial
         attach="material"
-        color={0xffcc44}
+        color={0x3366cc}
         transparent
-        opacity={0.07 * intensity}
+        opacity={0.25 * intensity}
         depthWrite={false}
         depthTest={false}
       />
@@ -387,6 +576,20 @@ const WeatherSystemInner = ({ config, dimensions }: Props) => {
 
   if (config.type === "sun") {
     return <SunOverlay intensity={config.intensity} dimensions={dimensions} />;
+  }
+
+  if (config.type === "moon") {
+    return <MoonOverlay intensity={config.intensity} dimensions={dimensions} />;
+  }
+
+  if (config.type === "wind") {
+    return (
+      <WindSystem
+        config={config}
+        dimensions={dimensions}
+        clippingPlanes={clippingPlanes}
+      />
+    );
   }
 
   if (config.type === "snow") {

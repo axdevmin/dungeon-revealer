@@ -47,6 +47,8 @@ const WEATHER_OPTIONS: WeatherOption[] = [
   { type: "rain", label: "Pluie", emoji: "🌧️" },
   { type: "storm", label: "Orage", emoji: "⛈️" },
   { type: "snow", label: "Neige", emoji: "❄️" },
+  { type: "wind", label: "Vent", emoji: "💨" },
+  { type: "moon", label: "Lune", emoji: "🌙" },
 ];
 
 const Container = styled.div`
@@ -192,7 +194,7 @@ export const WeatherControls = (props: {
               />
             </SliderRow>
 
-            {weather.type !== "sun" && (
+            {weather.type !== "sun" && weather.type !== "moon" && (
               <SliderRow>
                 <SliderLabel>
                   <span>Direction du vent</span>
