@@ -22,6 +22,7 @@ import { DmMap } from "./dm-map";
 import { Socket } from "socket.io-client";
 import { MapTokenEntity } from "../map-typings";
 import { isFileDrag } from "../hooks/use-drop-zone";
+import { useRandomBackground } from "../hooks/use-random-background";
 import { useNoteWindowActions } from "./token-info-aside";
 import { MapControlInterface } from "../map-view";
 import { useTokenImageUpload } from "./token-image-upload";
@@ -124,6 +125,7 @@ const Content = ({
   onLogout: () => void;
 }): React.ReactElement => {
   const [loadedMapId, setLoadedMapId] = useLoadedMapId();
+  const randomBackground = useRandomBackground();
 
   const dmAreaResponse = useQuery<dmArea_MapQuery>(
     DmArea_MapQuery,
@@ -306,6 +308,18 @@ const Content = ({
   return (
     <ErrorBoundary>
       <FetchContext.Provider value={localFetch}>
+        {!dmAreaResponse.data?.map && (
+          <div
+            style={{
+              position: "fixed",
+              inset: 0,
+              backgroundImage: `url("${randomBackground}")`,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+              zIndex: 0,
+            }}
+          />
+        )}
         {(dmAreaResponse.error === null &&
           // because it is a live query isLoading is always true
           // thanks relay :D

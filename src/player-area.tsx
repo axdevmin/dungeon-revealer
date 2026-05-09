@@ -26,6 +26,7 @@ import { playerArea_PlayerMap_ActiveMapQuery } from "./__generated__/playerArea_
 import { playerArea_MapPingMutation } from "./__generated__/playerArea_MapPingMutation.graphql";
 import { UpdateTokenContext } from "./update-token-context";
 import { LazyLoadedMapView } from "./lazy-loaded-map-view";
+import { useRandomBackground } from "./hooks/use-random-background";
 
 const ToolbarContainer = styled.div`
   position: absolute;
@@ -90,6 +91,7 @@ const PlayerMap = ({
   const mapId = currentMap?.data?.activeMap?.id ?? null;
   const showSplashScreen = mapId === null;
 
+  const randomBackground = useRandomBackground();
   const controlRef = React.useRef<MapControlInterface | null>(null);
   const [markedAreas, setMarkedAreas] = React.useState<MarkedArea[]>(() => []);
 
@@ -191,7 +193,9 @@ const PlayerMap = ({
     <>
       <div
         style={{
-          background: "#0d0f14",
+          background: currentMap.data?.activeMap
+            ? "#0d0f14"
+            : `url("${randomBackground}") center/cover no-repeat #0d0f14`,
           height: "100vh",
         }}
       >
