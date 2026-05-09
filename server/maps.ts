@@ -101,7 +101,14 @@ type LegacyMapEntity = {
   mediaType?: MediaType;
 };
 
-export type WeatherType = "none" | "rain" | "storm" | "snow" | "sun";
+export type WeatherType =
+  | "none"
+  | "rain"
+  | "storm"
+  | "snow"
+  | "sun"
+  | "moon"
+  | "wind";
 
 export type WeatherSettings = {
   type: WeatherType;
