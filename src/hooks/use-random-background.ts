@@ -2,7 +2,6 @@ import * as React from "react";
 
 const BACKGROUND_IMAGES = [
   "ChatGPT Image 3 mai 2026, 15_52_27.png",
-  "ChatGPT Image 3 mai 2026, 16_25_31.png",
   "ChatGPT Image 6 mai 2026, 20_54_16.png",
   "ChatGPT Image 8 mai 2026, 15_40_22.png",
   "ChatGPT Image 8 mai 2026, 15_42_35.png",
