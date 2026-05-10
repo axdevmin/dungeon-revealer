@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: navis
+    runtime: node
+    buildCommand: npm install && npm run build
+    startCommand: node server-build/index.js
+    plan: starter
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: DATA_DIRECTORY
+        value: /var/data/navis
+    volumes:
+      - path: /var/data/navis
+        name: navis-data
+    healthCheckPath: /
+    autoDeploy: true
