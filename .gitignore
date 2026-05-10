@@ -9,8 +9,8 @@
 *.exe
 *.o
 *.so
-dungeon-revealer-linux
-dungeon-revealer-macos
+navis-linux
+navis-macos
 build
 server-build
 __generated__

@@ -3,11 +3,11 @@
   "version": "2.0.4",
   "description": "Navis - RPG Map Sharing System",
   "bugs": {
-    "url": "https://github.com/dungeon-revealer/dungeon-revealer/issues"
+    "url": "https://github.com/axdevmin/navis/issues"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/dungeon-revealer/dungeon-revealer.git"
+    "url": "https://github.com/axdevmin/navis/.git"
   },
   "license": "ISC",
   "author": "apclary",
@@ -27,19 +27,9 @@
     "test": "jest --passWithNoTests",
     "start:frontend:dev": "vite",
     "start:server:dev": "ts-node-dev --project server/tsconfig.json --no-deps server/index.ts",
-    "relay-compiler": "relay-compiler",
+    "relay-compiler": "relay-compiler --schema type-definitions.graphql --src src --language typescript",
     "write-schema": "ts-node --project ./server/tsconfig.json  ./scripts/write-graphql-schema.ts",
-    "patch-package": "patch-package",
-    "prepare": "husky install",
-    "lint-staged": "lint-staged"
-  },
-  "lint-staged": {
-    "*.js": [
-      "eslint --fix"
-    ],
-    "*.{js,json,md,html,ts,tsx,graphql}": [
-      "prettier --write"
-    ]
+    "patch-package": "patch-package"
   },
   "browserslist": [
     ">0.2%",
@@ -106,25 +96,17 @@
     "@types/three": "0.126.2",
     "@types/unzipper": "^0.10.11",
     "@vitejs/plugin-react": "^5.2.0",
-    "babel-eslint": "10.1.0",
     "babel-jest": "27.3.1",
     "babel-plugin-relay": "10.1.3",
     "body-scroll-lock": "3.1.5",
-    "caxa": "^2.1.0",
-    "cross-env": "7.0.3",
-    "domhandler": "4.2.2",
     "eslint": "7.32.0",
     "eslint-config-prettier": "8.3.0",
     "eslint-plugin-react-app": "6.2.2",
     "fast-sha256": "1.3.0",
-    "framer-motion": "4.1.17",
     "htmlparser2": "6.1.0",
-    "husky": "7.0.4",
     "jest": "27.3.1",
     "leva": "0.9.14",
-    "lint-staged": "11.2.6",
     "monaco-editor": "0.31.1",
-    "parse-color": "1.0.0",
     "patch-package": "^8.0.1",
     "polished": "4.1.3",
     "postcss": "^8.5.14",
@@ -143,7 +125,6 @@
     "react-virtuoso": "2.3.1",
     "relay-compiler": "10.1.3",
     "relay-compiler-language-typescript": "13.0.10",
-    "relay-config": "10.1.3",
     "relay-hooks": "4.2.0",
     "relay-runtime": "10.1.3",
     "socket.io-client": "^4.8.3",

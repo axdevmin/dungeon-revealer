@@ -1,7 +1,7 @@
 node_modules
 npm-debug.log
 data/
-bin/dungeon-revealer-*
+bin/navis-*
 docker-cache
 arm-compile.Dockerfile
 Dockerfile
