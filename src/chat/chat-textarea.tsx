@@ -1,7 +1,9 @@
 import * as React from "react";
-import { Textarea, FormControl } from "@chakra-ui/react";
 import { useMessageAddMutation } from "./message-add-mutation";
 import { usePersistedState } from "../hooks/use-persisted-state";
+import styled from "@emotion/styled/macro";
+import { ds } from "../design-system";
+import * as Icon from "../feather-icons";
 
 const useRawChatHistory = () =>
   usePersistedState<Array<string>>("chat.history", {
@@ -41,6 +43,80 @@ const useChatHistory = (size = 10): [string[], (text: string) => void] => {
 
   return [data, pushValue];
 };
+
+const Wrapper = styled.div`
+  display: flex;
+  gap: 6px;
+  align-items: flex-end;
+`;
+
+const TextareaField = styled.textarea`
+  flex: 1;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid ${ds.colors.border};
+  border-radius: ${ds.radii.md};
+  color: ${ds.colors.textPrimary};
+  font-family: ${ds.font.sans};
+  font-size: 13px;
+  line-height: 1.5;
+  resize: none;
+  outline: none;
+  transition: all ${ds.transitions.fast};
+  min-height: 72px;
+
+  &::placeholder {
+    color: ${ds.colors.textMuted};
+  }
+
+  &:focus {
+    border-color: ${ds.colors.accentBorder};
+    background: rgba(201, 133, 58, 0.04);
+    box-shadow: 0 0 0 2px rgba(201, 133, 58, 0.1);
+  }
+
+  &::-webkit-scrollbar {
+    width: 3px;
+  }
+`;
+
+const SendButton = styled.button`
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  background: ${ds.colors.accentMuted};
+  border: 1px solid ${ds.colors.accentBorder};
+  border-radius: ${ds.radii.md};
+  color: ${ds.colors.accent};
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all ${ds.transitions.fast};
+
+  svg {
+    stroke: ${ds.colors.accent};
+  }
+
+  &:hover {
+    background: ${ds.colors.accent};
+    svg {
+      stroke: #fff;
+    }
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(201, 133, 58, 0.35);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+`;
+
+const Hint = styled.span`
+  font-size: 10px;
+  color: ${ds.colors.textMuted};
+  font-family: ${ds.font.sans};
+`;
 
 export const ChatTextArea: React.FC<{}> = () => {
   const [value, setValue] = React.useState("");
@@ -95,20 +171,20 @@ export const ChatTextArea: React.FC<{}> = () => {
   );
 
   return (
-    <FormControl
-      onSubmit={onSubmit}
-      onKeyPress={onKeyPress}
-      onKeyDown={onKeyDown}
-    >
-      <Textarea
-        placeholder="Écrire un message..."
-        value={value}
-        onChange={onChange}
-        rows={5}
-        resize="none"
-        fontSize="sm"
-        variant="filled"
-      />
-    </FormControl>
+    <div>
+      <Wrapper>
+        <TextareaField
+          placeholder="Écrire un message... (Entrée pour envoyer)"
+          value={value}
+          onChange={onChange}
+          onKeyPress={onKeyPress}
+          onKeyDown={onKeyDown}
+          rows={3}
+        />
+        <SendButton onClick={onSubmit} title="Envoyer">
+          <Icon.Send boxSize="15px" />
+        </SendButton>
+      </Wrapper>
+    </div>
   );
 };

@@ -153,8 +153,8 @@ export default ({
   });
 
   // TODO: this should definitely be moved somewhere else
-  router.put("/files/(*)", (req, res) => {
-    const filePath = req.params["0"];
+  router.put(/^\/files\/(.+)$/, (req, res) => {
+    const filePath = req.params[0] as string;
     if (filePath.includes("..")) {
       throw new Error("Invalid request.");
     }

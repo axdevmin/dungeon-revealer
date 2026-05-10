@@ -293,6 +293,11 @@ type Map {
   title: String!
 
   """
+  The description/notes of the map.
+  """
+  description: String!
+
+  """
   The URL of the map image.
   """
   mapImageUrl: String!
@@ -319,6 +324,11 @@ type Map {
   The type of media for the map background (image, gif, video, or video URL).
   """
   mediaType: MediaType!
+
+  """
+  The current weather effect on the map.
+  """
+  weatherSettings: WeatherSettings!
 }
 
 type MapGrid {
@@ -370,6 +380,26 @@ enum MediaType {
   Video URL (YouTube, Vimeo, etc.)
   """
   video_url
+}
+
+type WeatherSettings {
+  type: WeatherType!
+  intensity: Float!
+  windAngle: Float!
+}
+
+"""
+Type of weather effect on the map
+"""
+enum WeatherType {
+  none
+  rain
+  storm
+  snow
+  sun
+  moon
+  wind
+  cloudy
 }
 
 type Mutation {
@@ -425,9 +455,21 @@ type Mutation {
   mapUpdateTitle(input: MapUpdateTitleInput!): MapUpdateTitleResult!
 
   """
+  Update the description of a map.
+  """
+  mapUpdateDescription(
+    input: MapUpdateDescriptionInput!
+  ): MapUpdateDescriptionResult!
+
+  """
   Update the grid of a map.
   """
   mapUpdateGrid(input: MapUpdateGridInput!): MapUpdateGridResult!
+
+  """
+  Update the weather settings of a map.
+  """
+  mapUpdateWeather(input: MapUpdateWeatherInput!): MapUpdateWeatherResult!
 
   """
   Ping a point on the map.
@@ -730,6 +772,15 @@ input MapUpdateTitleInput {
   newTitle: String!
 }
 
+type MapUpdateDescriptionResult {
+  updatedMap: Map!
+}
+
+input MapUpdateDescriptionInput {
+  mapId: ID!
+  newDescription: String!
+}
+
 type MapUpdateGridResult {
   updatedMap: Map!
 }
@@ -747,6 +798,21 @@ input GridInput {
   offsetY: Float!
   columnWidth: Float!
   columnHeight: Float!
+}
+
+type MapUpdateWeatherResult {
+  updatedMap: Map!
+}
+
+input MapUpdateWeatherInput {
+  mapId: ID!
+  weatherSettings: WeatherSettingsInput!
+}
+
+input WeatherSettingsInput {
+  type: WeatherType!
+  intensity: Float!
+  windAngle: Float!
 }
 
 input MapPingInput {

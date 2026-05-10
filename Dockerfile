@@ -1,12 +1,14 @@
-FROM node:16 as dependency-builder
+FROM node:20-bullseye as dependency-builder
 
 WORKDIR /usr/src/build
+
+RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
 
 RUN echo "unsafe-perm = true" > .npmrc
 
 COPY . .
 
-RUN npm install
+RUN npm install --legacy-peer-deps && npm rebuild sqlite3 --build-from-source
 
 
 FROM dependency-builder as application-builder
@@ -21,7 +23,7 @@ FROM dependency-builder as production-dependency-builder
 RUN npm prune --production
 
 
-FROM node:16-slim as final
+FROM node:20-bullseye as final
 
 # Create app directory
 WORKDIR /usr/src/app

@@ -276,7 +276,7 @@ export const isDiceRollResult = (obj: unknown): obj is DiceRollResult =>
 
 const formatRoll = (result: RollInformation, id: string): DiceRollResult => {
   return Object.freeze({
-    [isDiceRollResultSymbol]: true,
+    [isDiceRollResultSymbol]: true as const,
     id,
     result: result.result,
     detail: result.tokens.map((token, index) => {

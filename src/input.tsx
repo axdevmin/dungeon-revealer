@@ -1,30 +1,28 @@
 import React from "react";
 import styled from "@emotion/styled/macro";
+import { ds } from "./design-system";
 
 const InputInner = styled.input`
-  border: none;
-  box-shadow: rgba(22, 23, 26, 0.15) 0px 0px 5px;
-
+  border: 1px solid ${ds.colors.border};
+  background: rgba(255, 255, 255, 0.05);
+  color: ${ds.colors.textPrimary};
+  font-family: ${ds.font.sans};
   width: 100%;
-
-  padding-top: 12px;
-  padding-bottom: 12px;
-  padding-left: 12px;
-  padding-right: 12px;
-
-  font-size: 16px;
-
-  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  border-radius: ${ds.radii.md};
+  outline: none;
+  transition: all ${ds.transitions.fast};
 
   ::placeholder {
-    color: #b3bbc3;
+    color: ${ds.colors.textMuted};
   }
-
-  outline: none;
 
   &:focus,
   &:hover {
-    box-shadow: rgba(22, 23, 26, 0.3) 0px 0px 5px;
+    border-color: ${ds.colors.accentBorder};
+    background: ${ds.colors.accentMuted};
+    box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.1);
   }
 `;
 
@@ -47,9 +45,10 @@ const InputGroupContainer = styled.div``;
 
 const InputError = styled.div`
   padding-top: 4px;
-  color: #ba2525;
+  color: ${ds.colors.danger};
   font-size: 12px;
   height: 12px;
+  font-family: ${ds.font.sans};
 `;
 
 export const InputGroup: React.FC<

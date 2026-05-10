@@ -92,6 +92,9 @@ import { dmMap_GridSettingButton_MapFragment$key } from "./__generated__/dmMap_G
 import { dmMap_mapUpdateGridMutation } from "./__generated__/dmMap_mapUpdateGridMutation.graphql";
 import { dmMap_GridConfigurator_MapFragment$key } from "./__generated__/dmMap_GridConfigurator_MapFragment.graphql";
 import { dmMap_MapPingMutation } from "./__generated__/dmMap_MapPingMutation.graphql";
+import { WeatherControls } from "./weather-controls";
+import { dmMap_WeatherButton_MapFragment$key } from "./__generated__/dmMap_WeatherButton_MapFragment.graphql";
+import { ErrorBoundary } from "../error-boundary";
 import { UpdateTokenContext } from "../update-token-context";
 import { IsDungeonMasterContext } from "../is-dungeon-master-context";
 import { LazyLoadedMapView } from "../lazy-loaded-map-view";
@@ -523,7 +526,55 @@ const TokenMarkerSettings = (): React.ReactElement => {
   );
 };
 
-const dmTools: Array<ToolMapRecord> = [
+const WeatherButtonMapFragment = graphql`
+  fragment dmMap_WeatherButton_MapFragment on Map {
+    weatherSettings {
+      type
+    }
+    ...weatherControls_MapFragment
+  }
+`;
+
+const WeatherButton = (props: {
+  map: dmMap_WeatherButton_MapFragment$key;
+}): React.ReactElement => {
+  const map = useFragment(WeatherButtonMapFragment, props.map);
+  const [isOpen, setIsOpen] = React.useState(false);
+  const ref = React.useRef<HTMLDivElement>(null);
+  useOnClickOutside(ref, () => setIsOpen(false));
+
+  const WEATHER_ICONS: Record<string, string> = {
+    none: "—",
+    sun: "☀️",
+    cloudy: "⛅",
+    rain: "🌧️",
+    storm: "⛈️",
+    snow: "❄️",
+    wind: "💨",
+    moon: "🌙",
+  };
+  const icon = WEATHER_ICONS[map.weatherSettings.type] ?? "—";
+
+  return (
+    <div ref={ref} style={{ position: "relative" }}>
+      <Toolbar.Item isActive>
+        <Toolbar.Button onClick={() => setIsOpen((v) => !v)}>
+          <span style={{ fontSize: "18px", lineHeight: 1 }}>{icon}</span>
+          <Icon.Label>Météo</Icon.Label>
+        </Toolbar.Button>
+      </Toolbar.Item>
+      {isOpen ? (
+        <div
+          style={{ position: "absolute", bottom: "100%", left: 0, zIndex: 10 }}
+        >
+          <WeatherControls map={map} />
+        </div>
+      ) : null}
+    </div>
+  );
+};
+
+const dmNavigationTools: Array<ToolMapRecord> = [
   {
     name: "Déplacer",
     icon: <Icon.Move boxSize="20px" />,
@@ -542,6 +593,9 @@ const dmTools: Array<ToolMapRecord> = [
     tool: AreaSelectMapTool,
     MenuComponent: AreaSelectSettings,
   },
+];
+
+const dmDisabledTools: Array<ToolMapRecord> = [
   {
     name: "Marquer",
     icon: <Icon.Crosshair boxSize="20px" />,
@@ -604,6 +658,7 @@ const DMMapFragment = graphql`
     ...mapContextMenuRenderer_MapFragment
     ...dmMap_GridSettingButton_MapFragment
     ...dmMap_GridConfigurator_MapFragment
+    ...dmMap_WeatherButton_MapFragment
   }
 `;
 
@@ -634,8 +689,11 @@ export const DmMap = (props: {
   );
 
   const userSelectedTool = React.useMemo(() => {
-    return (dmTools.find((tool) => tool.tool.id === activeToolId) ?? dmTools[0])
-      .tool;
+    const allTools = [...dmNavigationTools, ...dmDisabledTools];
+    return (
+      allTools.find((tool) => tool.tool.id === activeToolId) ??
+      dmNavigationTools[0]
+    ).tool;
   }, [activeToolId]);
 
   const [toolOverride, setToolOverride] = React.useState<null | MapTool>(null);
@@ -661,7 +719,7 @@ export const DmMap = (props: {
     canvas.convertToBlob().then((blob) => {
       clipboard
         .write([
-          new ClipboardItem({
+          new (ClipboardItem as any)({
             [blob.type]: blob,
           }),
         ])
@@ -696,7 +754,10 @@ export const DmMap = (props: {
         case "4":
         case "5": {
           const toolIndex = parseInt(ev.key, 10) - 1;
-          setActiveToolId(dmTools[toolIndex].tool.id);
+          setActiveToolId(
+            dmNavigationTools[toolIndex]?.tool.id ??
+              dmNavigationTools[0].tool.id
+          );
           break;
         }
         case "s": {
@@ -814,34 +875,37 @@ export const DmMap = (props: {
       ]}
     >
       <React.Suspense fallback={null}>
-        <LazyLoadedMapView
-          map={map}
-          activeTool={activeTool}
-          controlRef={controlRef}
-          sharedContexts={[
-            MarkAreaToolContext,
-            BrushToolContext,
-            ConfigureGridMapToolContext,
-            AreaSelectContext,
-            TokenMarkerContext,
-            NoteWindowActionsContext,
-            ReactRelayContext,
-            UpdateTokenContext,
-            IsDungeonMasterContext,
-            ContextMenuStoreContext,
-            SharedTokenStateStoreContext,
-          ]}
-          fogOpacity={0.5}
-        />
+        <ErrorBoundary>
+          <LazyLoadedMapView
+            map={map}
+            activeTool={activeTool}
+            controlRef={controlRef}
+            sharedContexts={[
+              MarkAreaToolContext,
+              BrushToolContext,
+              ConfigureGridMapToolContext,
+              AreaSelectContext,
+              TokenMarkerContext,
+              NoteWindowActionsContext,
+              ReactRelayContext,
+              UpdateTokenContext,
+              IsDungeonMasterContext,
+              ContextMenuStoreContext,
+              SharedTokenStateStoreContext,
+            ]}
+            fogOpacity={0.5}
+          />
+        </ErrorBoundary>
       </React.Suspense>
 
       {toolOverride !== ConfigureGridMapTool ? (
         <>
           <LeftToolbarContainer>
-            <Toolbar>
+            <Toolbar transparent>
               <Toolbar.Logo />
+              <ToolbarSectionLabel>Vue</ToolbarSectionLabel>
               <Toolbar.Group divider>
-                {dmTools.map((record) => (
+                {dmNavigationTools.map((record) => (
                   <MenuItemRenderer
                     key={record.tool.id}
                     record={record}
@@ -852,6 +916,7 @@ export const DmMap = (props: {
                   />
                 ))}
               </Toolbar.Group>
+              <ToolbarSectionLabel>Brouillard</ToolbarSectionLabel>
               <Toolbar.Group divider>
                 <ShroudRevealSettings />
               </Toolbar.Group>
@@ -863,7 +928,6 @@ export const DmMap = (props: {
                         header: "Tout masquer",
                         body: "Voulez-vous vraiment masquer toute la carte ?",
                         onConfirm: () => {
-                          // TODO: this should be less verbose
                           const context = controlRef.current?.getContext();
                           if (!context) {
                             return;
@@ -893,7 +957,6 @@ export const DmMap = (props: {
                         header: "Tout révéler",
                         body: "Voulez-vous vraiment révéler toute la carte ?",
                         onConfirm: () => {
-                          // TODO: this should be less verbose
                           const context = controlRef.current?.getContext();
                           if (!context) {
                             return;
@@ -917,10 +980,16 @@ export const DmMap = (props: {
                   </Toolbar.Button>
                 </Toolbar.Item>
               </Toolbar.Group>
+              <ToolbarSectionLabel>Bientôt</ToolbarSectionLabel>
+              <Toolbar.Group>
+                {dmDisabledTools.map((record) => (
+                  <DisabledToolItem key={record.tool.id} record={record} />
+                ))}
+              </Toolbar.Group>
             </Toolbar>
           </LeftToolbarContainer>
           <BottomToolbarContainer>
-            <Toolbar horizontal>
+            <Toolbar horizontal transparent>
               <Toolbar.Group>
                 <GridSettingButton
                   map={map}
@@ -928,6 +997,7 @@ export const DmMap = (props: {
                     setToolOverride(ConfigureGridMapTool);
                   }}
                 />
+                <WeatherButton map={map} />
                 <Toolbar.Item isActive>
                   <Toolbar.Button
                     onClick={() => {
@@ -948,20 +1018,10 @@ export const DmMap = (props: {
                     <Icon.Label>Médias</Icon.Label>
                   </Toolbar.Button>
                 </Toolbar.Item>
-                <Toolbar.Item isActive>
-                  <Toolbar.Button
-                    onClick={() => {
-                      props.openNotes();
-                    }}
-                  >
-                    <Icon.BookOpen boxSize="20px" />
-                    <Icon.Label>Notes</Icon.Label>
-                  </Toolbar.Button>
-                </Toolbar.Item>
               </Toolbar.Group>
             </Toolbar>
             <MarginLeftDiv />
-            <Toolbar horizontal>
+            <Toolbar horizontal transparent>
               <Toolbar.Group>
                 <Toolbar.Item isActive>
                   <Toolbar.Button onClick={props.onLogout}>
@@ -979,19 +1039,11 @@ export const DmMap = (props: {
                     )}
                   >
                     <Icon.Pause
-                      stroke={
-                        props.liveMapId !== null
-                          ? "hsl(360, 83%, 62%)"
-                          : "hsl(211, 27%, 70%)"
-                      }
+                      stroke={props.liveMapId !== null ? "#f87171" : "#6b7280"}
                       boxSize="20px"
                     />
                     <Icon.Label
-                      color={
-                        props.liveMapId !== null
-                          ? "hsl(360, 83%, 62%)"
-                          : "hsl(211, 27%, 70%)"
-                      }
+                      color={props.liveMapId !== null ? "#f87171" : "#6b7280"}
                     >
                       Arrêter
                     </Icon.Label>
@@ -999,29 +1051,25 @@ export const DmMap = (props: {
                 </Toolbar.Item>
                 {isCurrentMapLive ? (
                   <Toolbar.Item>
-                    <Icon.Radio stroke="hsl(160, 51%, 49%)" boxSize="20px" />
-                    <Icon.Label color="hsl(160, 51%, 49%)">
-                      En direct
-                    </Icon.Label>
+                    <Icon.Radio stroke="#4ade80" boxSize="20px" />
+                    <Icon.Label color="#4ade80">En direct</Icon.Label>
                   </Toolbar.Item>
                 ) : isOtherMapLive ? (
                   <Toolbar.Item>
-                    <Icon.Radio stroke="hsl(48, 94%, 68%)" boxSize="20px" />
-                    <Icon.Label color="hsl(48, 94%, 68%)">En direct</Icon.Label>
+                    <Icon.Radio stroke="#fbbf24" boxSize="20px" />
+                    <Icon.Label color="#fbbf24">En direct</Icon.Label>
                   </Toolbar.Item>
                 ) : (
                   <Toolbar.Item>
-                    <Icon.Radio stroke="hsl(211, 27%, 70%)" boxSize="20px" />
-                    <Icon.Label color="hsl(211, 27%, 70%)">
-                      Hors ligne
-                    </Icon.Label>
+                    <Icon.Radio stroke="#6b7280" boxSize="20px" />
+                    <Icon.Label color="#6b7280">Hors ligne</Icon.Label>
                   </Toolbar.Item>
                 )}
                 {asyncClipBoardApi ? (
                   <Toolbar.Item isActive>
                     <Toolbar.Button onClick={copyMapToClipboard}>
                       <Icon.Clipboard boxSize="20px" />
-                      <Icon.Label>Presse-papier</Icon.Label>
+                      <Icon.Label>Copier</Icon.Label>
                     </Toolbar.Button>
                   </Toolbar.Item>
                 ) : null}
@@ -1075,7 +1123,7 @@ const LeftToolbarContainer = styled.div`
   position: absolute;
   height: 100%;
   top: 0;
-  left: 12px;
+  left: 14px;
   pointer-events: none;
   @media (max-width: 580px) {
     top: 1em;
@@ -1083,20 +1131,64 @@ const LeftToolbarContainer = styled.div`
   }
 `;
 
+const ToolbarSectionLabel = styled.div`
+  font-size: 6px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.18);
+  text-align: center;
+  padding: 4px 4px 0px;
+  user-select: none;
+  pointer-events: none;
+`;
+
+const DisabledToolbarItemStyled = styled.li`
+  position: relative;
+  padding-top: 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  opacity: 0.28;
+  cursor: default;
+  pointer-events: none;
+  color: rgba(255, 255, 255, 0.3);
+
+  > button {
+    cursor: default;
+    pointer-events: none;
+  }
+
+  svg {
+    stroke: rgba(255, 255, 255, 0.3) !important;
+    transition: none !important;
+  }
+
+  &:hover,
+  &:hover svg,
+  &:hover button {
+    color: rgba(255, 255, 255, 0.3);
+    stroke: rgba(255, 255, 255, 0.3) !important;
+    transform: none !important;
+  }
+`;
+
 const BottomToolbarContainer = styled.div`
   display: flex;
   justify-content: center;
+  align-items: center;
   width: 100%;
   position: absolute;
-  bottom: 12px;
+  bottom: 16px;
   pointer-events: none;
   flex-wrap: wrap;
+  gap: 12px;
 `;
 
 const MarginLeftDiv = styled.div`
-  margin-left: 24px;
   @media (max-width: 580px) {
-    margin-left: 0px;
+    display: none;
   }
 `;
 
@@ -1131,6 +1223,19 @@ const MenuItemRenderer = (props: {
   );
 };
 
+const DisabledToolItem = (props: {
+  record: ToolMapRecord;
+}): React.ReactElement => {
+  return (
+    <DisabledToolbarItemStyled title="Disponible prochainement">
+      <Toolbar.Button>
+        {props.record.icon}
+        <Icon.Label>{props.record.name}</Icon.Label>
+      </Toolbar.Button>
+    </DisabledToolbarItemStyled>
+  );
+};
+
 const GridConfigurator_MapFragment = graphql`
   fragment dmMap_GridConfigurator_MapFragment on Map {
     id
@@ -1154,23 +1259,31 @@ const GridConfigurator = (props: {
   return (
     <Stack
       position="absolute"
-      bottom="12px"
-      right="12px"
+      top="50%"
+      left="50%"
+      style={{ transform: "translate(-50%, -50%)" }}
       width="100%"
-      maxWidth="500px"
+      maxWidth="480px"
       borderRadius="12px"
-      padding="2"
-      backgroundColor="white"
+      padding="4"
+      backgroundColor="rgba(13,15,20,0.92)"
+      border="1px solid rgba(96,165,250,0.2)"
+      boxShadow="0 8px 32px rgba(0,0,0,0.6)"
+      backdropFilter="blur(12px)"
       zIndex="1"
+      color="white"
     >
-      <Heading size="lg">Grid Configurator</Heading>
-      <Text>
-        Press and hold <strong>Alt</strong> for dragging the grid with your
-        mouse.
+      <Heading size="md" color="white">
+        Configurateur de grille
+      </Heading>
+      <Text fontSize="sm" color="rgba(255,255,255,0.6)">
+        Maintenez <strong>Alt</strong> pour déplacer la grille à la souris.
       </Text>
       <HStack>
         <FormControl>
-          <FormLabel>X-Coordinate</FormLabel>
+          <FormLabel color="rgba(255,255,255,0.8)" fontSize="sm">
+            Coordonnée X
+          </FormLabel>
           <InputGroup size="sm">
             <NumberInput
               value={state.offsetX}
@@ -1185,16 +1298,33 @@ const GridConfigurator = (props: {
                 }));
               }}
             >
-              <NumberInputField />
+              <NumberInputField
+                bg="rgba(255,255,255,0.07)"
+                border="1px solid rgba(255,255,255,0.15)"
+                color="white"
+                _hover={{ border: "1px solid rgba(96,165,250,0.4)" }}
+                _focus={{
+                  border: "1px solid rgba(96,165,250,0.7)",
+                  boxShadow: "none",
+                }}
+              />
               <NumberInputStepper>
-                <NumberIncrementStepper />
-                <NumberDecrementStepper />
+                <NumberIncrementStepper
+                  color="rgba(255,255,255,0.5)"
+                  border="none"
+                />
+                <NumberDecrementStepper
+                  color="rgba(255,255,255,0.5)"
+                  border="none"
+                />
               </NumberInputStepper>
             </NumberInput>
           </InputGroup>
         </FormControl>
         <FormControl>
-          <FormLabel>Y-Coordinate</FormLabel>
+          <FormLabel color="rgba(255,255,255,0.8)" fontSize="sm">
+            Coordonnée Y
+          </FormLabel>
           <InputGroup size="sm">
             <NumberInput
               value={state.offsetY}
@@ -1209,10 +1339,25 @@ const GridConfigurator = (props: {
                 }));
               }}
             >
-              <NumberInputField />
+              <NumberInputField
+                bg="rgba(255,255,255,0.07)"
+                border="1px solid rgba(255,255,255,0.15)"
+                color="white"
+                _hover={{ border: "1px solid rgba(96,165,250,0.4)" }}
+                _focus={{
+                  border: "1px solid rgba(96,165,250,0.7)",
+                  boxShadow: "none",
+                }}
+              />
               <NumberInputStepper>
-                <NumberIncrementStepper />
-                <NumberDecrementStepper />
+                <NumberIncrementStepper
+                  color="rgba(255,255,255,0.5)"
+                  border="none"
+                />
+                <NumberDecrementStepper
+                  color="rgba(255,255,255,0.5)"
+                  border="none"
+                />
               </NumberInputStepper>
             </NumberInput>
           </InputGroup>
@@ -1220,7 +1365,9 @@ const GridConfigurator = (props: {
       </HStack>
       <HStack>
         <FormControl>
-          <FormLabel>Column Width</FormLabel>
+          <FormLabel color="rgba(255,255,255,0.8)" fontSize="sm">
+            Largeur colonne
+          </FormLabel>
           <InputGroup size="sm">
             <NumberInput
               value={state.columnWidth}
@@ -1235,16 +1382,33 @@ const GridConfigurator = (props: {
                 }));
               }}
             >
-              <NumberInputField />
+              <NumberInputField
+                bg="rgba(255,255,255,0.07)"
+                border="1px solid rgba(255,255,255,0.15)"
+                color="white"
+                _hover={{ border: "1px solid rgba(96,165,250,0.4)" }}
+                _focus={{
+                  border: "1px solid rgba(96,165,250,0.7)",
+                  boxShadow: "none",
+                }}
+              />
               <NumberInputStepper>
-                <NumberIncrementStepper />
-                <NumberDecrementStepper />
+                <NumberIncrementStepper
+                  color="rgba(255,255,255,0.5)"
+                  border="none"
+                />
+                <NumberDecrementStepper
+                  color="rgba(255,255,255,0.5)"
+                  border="none"
+                />
               </NumberInputStepper>
             </NumberInput>
           </InputGroup>
         </FormControl>
         <FormControl>
-          <FormLabel>Column Height</FormLabel>
+          <FormLabel color="rgba(255,255,255,0.8)" fontSize="sm">
+            Hauteur colonne
+          </FormLabel>
           <InputGroup size="sm">
             <NumberInput
               value={state.columnHeight}
@@ -1259,10 +1423,25 @@ const GridConfigurator = (props: {
                 }));
               }}
             >
-              <NumberInputField />
+              <NumberInputField
+                bg="rgba(255,255,255,0.07)"
+                border="1px solid rgba(255,255,255,0.15)"
+                color="white"
+                _hover={{ border: "1px solid rgba(96,165,250,0.4)" }}
+                _focus={{
+                  border: "1px solid rgba(96,165,250,0.7)",
+                  boxShadow: "none",
+                }}
+              />
               <NumberInputStepper>
-                <NumberIncrementStepper />
-                <NumberDecrementStepper />
+                <NumberIncrementStepper
+                  color="rgba(255,255,255,0.5)"
+                  border="none"
+                />
+                <NumberDecrementStepper
+                  color="rgba(255,255,255,0.5)"
+                  border="none"
+                />
               </NumberInputStepper>
             </NumberInput>
           </InputGroup>

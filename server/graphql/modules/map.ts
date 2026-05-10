@@ -6,7 +6,13 @@ import * as io from "io-ts";
 import * as Relay from "./relay-spec";
 import { t } from "..";
 import * as lib from "../../map-lib";
-import { MapEntity, MapGridEntity, MapTokenEntity } from "../../maps";
+import {
+  MapEntity,
+  MapGridEntity,
+  MapTokenEntity,
+  WeatherSettings,
+  WeatherType,
+} from "../../maps";
 import { IntegerFromString } from "../../io-types/integer-from-string";
 import { applyDecoder } from "../../apply-decoder";
 import { decodeImageId, GraphQLTokenImageType } from "./token-image";
@@ -43,6 +49,55 @@ const GraphQLMediaTypeEnum = t.enumType<MediaType>({
     },
   ],
 });
+
+const GraphQLWeatherTypeEnum = t.enumType<WeatherType>({
+  name: "WeatherType",
+  description: "Type of weather effect on the map",
+  values: [
+    { name: "none", value: "none" as const },
+    { name: "rain", value: "rain" as const },
+    { name: "storm", value: "storm" as const },
+    { name: "snow", value: "snow" as const },
+    { name: "sun", value: "sun" as const },
+    { name: "moon", value: "moon" as const },
+    { name: "wind", value: "wind" as const },
+    { name: "cloudy", value: "cloudy" as const },
+  ],
+});
+
+const GraphQLWeatherSettingsType = t.objectType<WeatherSettings>({
+  name: "WeatherSettings",
+  fields: () => [
+    t.field({ name: "type", type: t.NonNull(GraphQLWeatherTypeEnum) }),
+    t.field({ name: "intensity", type: t.NonNull(t.Float) }),
+    t.field({ name: "windAngle", type: t.NonNull(t.Float) }),
+  ],
+});
+
+const GraphQLWeatherSettingsInputType = t.inputObjectType({
+  name: "WeatherSettingsInput",
+  fields: () => ({
+    type: { type: t.NonNullInput(GraphQLWeatherTypeEnum) },
+    intensity: { type: t.NonNullInput(t.Float) },
+    windAngle: { type: t.NonNullInput(t.Float) },
+  }),
+});
+
+const GraphQLMapUpdateWeatherInputType = t.inputObjectType({
+  name: "MapUpdateWeatherInput",
+  fields: () => ({
+    mapId: { type: t.NonNullInput(t.ID) },
+    weatherSettings: { type: t.NonNullInput(GraphQLWeatherSettingsInputType) },
+  }),
+});
+
+const GraphQLMapUpdateWeatherResultType =
+  t.objectType<lib.MapUpdateWeatherResult>({
+    name: "MapUpdateWeatherResult",
+    fields: () => [
+      t.field({ name: "updatedMap", type: t.NonNull(GraphQLMapType) }),
+    ],
+  });
 
 const GraphQLMapTokenUpdateManyPropertiesInput = t.inputObjectType({
   name: "MapTokenUpdateManyPropertiesInput",
@@ -252,6 +307,29 @@ const GraphQLMapUpdateTitleInputType = t.inputObjectType({
   }),
 });
 
+const GraphQLMapUpdateDescriptionResultType =
+  t.objectType<lib.MapUpdateDescriptionResult>({
+    name: "MapUpdateDescriptionResult",
+    fields: () => [
+      t.field({
+        name: "updatedMap",
+        type: t.NonNull(GraphQLMapType),
+      }),
+    ],
+  });
+
+const GraphQLMapUpdateDescriptionInputType = t.inputObjectType({
+  name: "MapUpdateDescriptionInput",
+  fields: () => ({
+    mapId: {
+      type: t.NonNullInput(t.ID),
+    },
+    newDescription: {
+      type: t.NonNullInput(t.String),
+    },
+  }),
+});
+
 const GraphQLMapUpdateGridResultType = t.objectType<lib.MapUpdateGridResult>({
   name: "MapUpdateGridResult",
   fields: () => [
@@ -437,6 +515,16 @@ export const mutationFields = [
       RT.run(lib.mapUpdateTitle(input), context),
   }),
   t.field({
+    name: "mapUpdateDescription",
+    description: "Update the description of a map.",
+    type: t.NonNull(GraphQLMapUpdateDescriptionResultType),
+    args: {
+      input: t.arg(t.NonNullInput(GraphQLMapUpdateDescriptionInputType)),
+    },
+    resolve: (_, { input }, context) =>
+      RT.run(lib.mapUpdateDescription(input), context),
+  }),
+  t.field({
     name: "mapUpdateGrid",
     description: "Update the grid of a map.",
     type: t.NonNull(GraphQLMapUpdateGridResultType),
@@ -445,6 +533,26 @@ export const mutationFields = [
     },
     resolve: (_, { input }, context) =>
       RT.run(lib.mapUpdateGrid(input), context),
+  }),
+  t.field({
+    name: "mapUpdateWeather",
+    description: "Update the weather settings of a map.",
+    type: t.NonNull(GraphQLMapUpdateWeatherResultType),
+    args: {
+      input: t.arg(t.NonNullInput(GraphQLMapUpdateWeatherInputType)),
+    },
+    resolve: (_, { input }, context) =>
+      RT.run(
+        lib.mapUpdateWeather({
+          mapId: input.mapId,
+          weatherSettings: {
+            type: input.weatherSettings.type as WeatherType,
+            intensity: input.weatherSettings.intensity,
+            windAngle: input.weatherSettings.windAngle,
+          },
+        }),
+        context
+      ),
   }),
   t.field({
     name: "mapPing",
@@ -580,6 +688,11 @@ const GraphQLMapType = t.objectType<MapEntity>({
       type: t.NonNull(t.String),
     }),
     t.field({
+      name: "description",
+      description: "The description/notes of the map.",
+      type: t.NonNull(t.String),
+    }),
+    t.field({
       name: "mapImageUrl",
       description: "The URL of the map image.",
       type: t.NonNull(t.String),
@@ -656,6 +769,11 @@ const GraphQLMapType = t.objectType<MapEntity>({
       description:
         "The type of media for the map background (image, gif, video, or video URL).",
       type: t.NonNull(GraphQLMediaTypeEnum),
+    }),
+    t.field({
+      name: "weatherSettings",
+      description: "The current weather effect on the map.",
+      type: t.NonNull(GraphQLWeatherSettingsType),
     }),
   ],
 });

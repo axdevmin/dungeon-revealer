@@ -37,14 +37,14 @@ bootstrapServer(env).then(({ httpServer }) => {
       versionString = `${env.VERSION.appVersion}\nI couldn't verify the git commit of this version, but I think it's based on ${env.VERSION.appVersion}.\n`;
     }
 
-    console.log(`\nStarting dungeon-revealer@${versionString} 
+    console.log(`\nStarting navis@${versionString}
 
 Configuration:
-- HOST: ${env.HOST} 
+- HOST: ${env.HOST}
 - PORT: ${env.PORT}
 - PUBLIC_URL: ${env.PUBLIC_URL || "<none>"}
 
-dungeon-revealer is reachable via the following addresses:
+Navis is reachable via the following addresses:
 `);
 
     const addresses = getListeningAddresses();

@@ -21,6 +21,7 @@ import type { SpringValue } from "react-spring";
 import { useWindowDimensions } from "./hooks/use-window-dimensions";
 import { SplashShareImage } from "./splash-share-image";
 import { usePersistedState } from "./hooks/use-persisted-state";
+import { ds } from "./design-system";
 
 const useShowChatState = () =>
   usePersistedState<"show" | "hidden">("chat.state", {
@@ -55,30 +56,34 @@ const Container = styled.div`
   height: 100%;
   position: relative;
   overflow: hidden;
+  background: ${ds.colors.bg};
 `;
 
 const IconContainer = styled(animated.div)`
-  margin-top: 10px;
-  margin-right: 10px;
   display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 8px;
+  pointer-events: none;
 `;
 
 const Aside = styled.div<{ width: number }>`
   height: 100%;
   width: ${(p) => p.width}px;
-  border-left: 1px solid lightgrey;
+  border-left: 1px solid ${ds.colors.border};
   pointer-events: all;
-  background: #fff;
+  background: ${ds.colors.surface};
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 `;
 
-const CHAT_WIDTH = 400;
-const CHAT_BUTTONS_WIDTH = 85;
+const CHAT_WIDTH = 360;
+const CHAT_BUTTONS_WIDTH = 70;
 
 const useChatWidth = () => {
   const windowDimensions = useWindowDimensions();
-
   let chatWidth = CHAT_WIDTH;
-
   if (chatWidth + CHAT_BUTTONS_WIDTH > windowDimensions.width) {
     chatWidth = windowDimensions.width - CHAT_BUTTONS_WIDTH;
   }
@@ -89,6 +94,9 @@ const AuthenticatedAppShellRenderer: React.FC<{ isMapOnly: boolean }> = ({
   isMapOnly,
   children,
 }) => {
+  const role = useViewerRole();
+  const isDM = role === "DM";
+
   const [chatState, setShowChatState] = useShowChatState();
   const [diceRollNotesState, setDiceRollNotesState] =
     useShowDiceRollNotesState();
@@ -111,7 +119,7 @@ const AuthenticatedAppShellRenderer: React.FC<{ isMapOnly: boolean }> = ({
   const [showSearch, setShowSearch] = React.useState(false);
 
   React.useEffect(() => {
-    if (!isLoggedIn) return;
+    if (!isLoggedIn || !isDM) return;
 
     const listener = (ev: KeyboardEvent) => {
       if ((ev.ctrlKey || ev.metaKey) && ev.shiftKey && ev.keyCode === 70) {
@@ -122,12 +130,13 @@ const AuthenticatedAppShellRenderer: React.FC<{ isMapOnly: boolean }> = ({
 
     window.addEventListener("keydown", listener);
     return () => window.removeEventListener("keydown", listener);
-  }, [isLoggedIn]);
+  }, [isLoggedIn, isDM]);
 
   const chatWidth = useChatWidth();
 
   const chatPosition = useSpring({
     x: chatState === "hidden" ? chatWidth : 0,
+    config: { tension: 280, friction: 30 },
   });
 
   const chatPositionContextValue = React.useMemo(() => {
@@ -164,12 +173,15 @@ const AuthenticatedAppShellRenderer: React.FC<{ isMapOnly: boolean }> = ({
                 }}
               >
                 <IconContainer>
-                  <IconButton
-                    onClick={() => setShowSearch(true)}
-                    style={{ marginRight: 8, pointerEvents: "all" }}
-                  >
-                    <Icon.Search boxSize="20px" />
-                  </IconButton>
+                  {isDM ? (
+                    <IconButton
+                      onClick={() => setShowSearch(true)}
+                      style={{ pointerEvents: "all" }}
+                      title="Rechercher (Ctrl+Shift+F)"
+                    >
+                      <Icon.Search boxSize="16px" />
+                    </IconButton>
+                  ) : null}
                   <ChatToggleButton
                     hasUnreadMessages={hasUnreadMessages}
                     onClick={() => {
@@ -190,7 +202,7 @@ const AuthenticatedAppShellRenderer: React.FC<{ isMapOnly: boolean }> = ({
         {isMapOnly === false ? (
           <React.Fragment>
             <TokenInfoAside />
-            {showSearch ? (
+            {isDM && showSearch ? (
               <NoteSearch close={() => setShowSearch(false)} />
             ) : null}
             {diceRollNotesState === "show" ? (
@@ -237,15 +249,9 @@ export const AuthenticatedAppShell: React.FC<{
   role: AuthenticatedRole;
 }> = ({ socket, password, isMapOnly, role, children }) => {
   const relayEnvironment = useStaticRef(() => createEnvironment(socket));
-  // WebSocket connection state
   const [connectionMode, setConnectionMode] =
     React.useState<ConnectionMode>("connecting");
 
-  /**
-   * We only use one tab at a time. The others will be disconnected automatically upon opening Navis in another tab.
-   * You can still use Navis in two tabs by using the incognito mode of the browser.
-   * We do this in order to prevent message/user connect/music sound effect spamming.
-   */
   React.useEffect(() => {
     const authenticate = () => {
       socket.emit("authenticate", {
@@ -272,51 +278,48 @@ export const AuthenticatedAppShell: React.FC<{
       setConnectionMode("disconnected");
     });
 
+    socket.on("connect_error", () => {
+      setConnectionMode("disconnected");
+    });
+
     if (socket.connected) {
       authenticate();
     }
 
-    const tabId = String(
-      parseInt(localStorage.getItem("app.tabId") || "0", 10) + 1
-    );
-    localStorage.setItem("app.tabId", tabId);
-    localStorage.setItem("app.activeTabId", tabId);
-
-    window.addEventListener("storage", (ev) => {
-      if (ev.key === "app.activeTabId" && ev.newValue !== tabId) {
-        socket.disconnect();
-      }
-    });
-
-    window.addEventListener("focus", () => {
-      localStorage.setItem("app.activeTabId", tabId);
-      if (!socket.connected) {
-        socket.connect();
-      }
-    });
-
     return () => {
       socket.off("connect");
-      socket.off("reconnecting");
+      socket.off("authenticated");
       socket.off("reconnect");
-      socket.off("reconnect_failed");
       socket.off("disconnect");
+      socket.off("connect_error");
     };
-  }, [socket, password]);
+  }, [socket, password, role]);
 
-  if (connectionMode !== "authenticated") {
-    return <SplashScreen text={connectionMode} />;
+  const tagline = role === "Player" ? "Plateau des Joueurs" : undefined;
+
+  if (connectionMode === "connecting" || connectionMode === "connected") {
+    return <SplashScreen text="Connexion..." tagline={tagline} />;
+  }
+
+  if (connectionMode === "authenticating") {
+    return <SplashScreen text="Authentification..." tagline={tagline} />;
+  }
+
+  if (connectionMode === "disconnected") {
+    return (
+      <SplashScreen text="Connexion perdue. Reconnexion..." tagline={tagline} />
+    );
   }
 
   return (
-    <RoleContext.Provider value={role}>
-      <SoundSettingsProvider>
-        <RelayEnvironmentProvider environment={relayEnvironment}>
+    <RelayEnvironmentProvider environment={relayEnvironment}>
+      <RoleContext.Provider value={role}>
+        <SoundSettingsProvider>
           <AuthenticatedAppShellRenderer isMapOnly={isMapOnly}>
             {children}
           </AuthenticatedAppShellRenderer>
-        </RelayEnvironmentProvider>
-      </SoundSettingsProvider>
-    </RoleContext.Provider>
+        </SoundSettingsProvider>
+      </RoleContext.Provider>
+    </RelayEnvironmentProvider>
   );
 };
