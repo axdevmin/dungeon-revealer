@@ -7,6 +7,9 @@ const BACKGROUND_IMAGES = [
   "ChatGPT Image 8 mai 2026, 15_42_35.png",
   "ChatGPT Image 9 mai 2026, 15_25_37.png",
   "ChatGPT Image 9 mai 2026, 15_28_49.png",
+  "ChatGPT Image 10 mai 2026, 19_04_27.png",
+  "ChatGPT Image 10 mai 2026, 19_06_20.png",
+  "ChatGPT Image 10 mai 2026, 19_10_11.png",
   "navis-background.jpg",
 ];
 
