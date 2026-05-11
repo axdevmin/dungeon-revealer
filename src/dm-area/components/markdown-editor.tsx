@@ -461,11 +461,11 @@ const TextToolBar = styled.div`
 `;
 
 const ToolBarButton = styled.button`
-  border-color: white;
+  border-color: #333366;
   border-radius: 5px;
   padding: 8px;
   display: flex;
-  background: white;
+  background: #1e1f30;
   cursor: pointer;
   border: none;
   &:hover > svg {
@@ -476,7 +476,7 @@ const ToolBarButton = styled.button`
 const ToolBarButtonDropDown = styled.div`
   display: inline-block;
   position: relative;
-  background: white;
+  background: #1e1f30;
 
   &:hover [data-menu] {
     display: block;
@@ -496,12 +496,12 @@ const DropDownMenu = styled.div`
 `;
 
 const DropDownMenuInner = styled.div`
-  background-color: #fff;
+  background-color: #1e1f30;
   min-width: 140px;
 `;
 
 const DropDownMenuItem = styled.button`
-  background: white;
+  background: #1e1f30;
   border: none;
   display: block;
   width: 100%;
@@ -510,7 +510,7 @@ const DropDownMenuItem = styled.button`
   cursor: pointer;
   text-align: left;
   &:hover {
-    background-color: #e6e6e6;
+    background-color: #2a2a4e;
   }
 `;
 

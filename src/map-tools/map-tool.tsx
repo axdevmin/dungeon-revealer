@@ -9,6 +9,7 @@ type Vector3D = [number, number, number];
 
 export type SharedMapToolState = {
   ratio: number;
+  fogVersion: number;
   mapImage: HTMLImageElement | null;
   mapCanvas: HTMLCanvasElement;
   fogCanvas: HTMLCanvasElement;

@@ -119,10 +119,10 @@ const NoteEditorSideReference = styled.div`
   left: calc(100% + 12px);
   top: 25%;
   width: 300px;
-  background: white;
-  border-left: 1px solid lightgrey;
+  background: #1a1b2e;
+  border-left: 1px solid #333366;
   border-radius: 5px;
-  box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
 `;
 
 const WindowContext = React.createContext("NON_EXISTING_WINDOW");
@@ -150,8 +150,8 @@ const TitleAutoSaveInput = (props: { id: string; title: string }) => {
 };
 
 const PermissionMenuContainer = styled.div`
-  background-color: white;
-  box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+  background-color: #1a1b2e;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
   border-radius: 5px;
   padding: 8px;
   position: absolute;

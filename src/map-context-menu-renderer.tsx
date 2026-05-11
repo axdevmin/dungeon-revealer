@@ -1,16 +1,26 @@
 import * as React from "react";
 import graphql from "babel-plugin-relay/macro";
 import { useFragment, useMutation } from "relay-hooks";
-import { Box, Menu, MenuItem, MenuList } from "@chakra-ui/react";
+import { Box, Menu, MenuItem, MenuDivider, MenuList } from "@chakra-ui/react";
 import { MapTokenEntity } from "./map-typings";
 import { useContextMenu } from "./map-context-menu";
-import { useSelectedItems } from "./shared-token-state";
-import { mapContextMenuRendererMapTokenRemoveManyMutation } from "./__generated__/mapContextMenuRendererMapTokenRemoveManyMutation.graphql";
 import {
-  mapContextMenuRendererMapTokenAddManyMutation,
-  MapTokenAddManyTokenInput,
-} from "./__generated__/mapContextMenuRendererMapTokenAddManyMutation.graphql";
+  useSelectedItems,
+  usePropertiesPanel,
+  useHiddenLabels,
+} from "./shared-token-state";
+import { mapContextMenuRendererMapTokenRemoveManyMutation } from "./__generated__/mapContextMenuRendererMapTokenRemoveManyMutation.graphql";
+import { mapContextMenuRendererMapTokenAddManyMutation } from "./__generated__/mapContextMenuRendererMapTokenAddManyMutation.graphql";
+import { mapContextMenuRendererUpdateManyMutation } from "./__generated__/mapContextMenuRendererUpdateManyMutation.graphql";
 import { mapContextMenuRenderer_MapFragment$key } from "./__generated__/mapContextMenuRenderer_MapFragment.graphql";
+
+const MapContextMenuRendererUpdateManyMutation = graphql`
+  mutation mapContextMenuRendererUpdateManyMutation(
+    $input: MapTokenUpdateManyInput!
+  ) {
+    mapTokenUpdateMany(input: $input)
+  }
+`;
 
 const MapContextMenuRendererMapTokenRemoveManyMutation = graphql`
   mutation mapContextMenuRendererMapTokenRemoveManyMutation(
@@ -42,6 +52,9 @@ const MapFragment = graphql`
       isVisibleForPlayers
       isMovableByPlayers
       isLocked
+      tokenType
+      isAlive
+      imageUrl
       tokenImage {
         id
       }
@@ -63,6 +76,9 @@ export const ContextMenuRenderer = (props: {
           hits.set(token.id, {
             ...token,
             tokenImageId: token.tokenImage?.id ?? null,
+            tokenType: (token.tokenType as any) ?? "marker",
+            isAlive: token.isAlive ?? true,
+            imageUrl: token.imageUrl ?? null,
             reference: token.referenceId
               ? {
                   id: token.referenceId,
@@ -77,9 +93,10 @@ export const ContextMenuRenderer = (props: {
     [map.tokens]
   );
 
-  const { state, copyContent, showContextMenu, setCopyContent } =
-    useContextMenu();
+  const { state, showContextMenu } = useContextMenu();
   const [selectedItems, clearSelectedItems] = useSelectedItems();
+  const [propertiesPanelHidden, togglePropertiesPanel] = usePropertiesPanel();
+  const [hiddenLabelTokenIds, toggleLabelVisibility] = useHiddenLabels();
 
   const [mapTokenDeleteMany] =
     useMutation<mapContextMenuRendererMapTokenRemoveManyMutation>(
@@ -89,55 +106,82 @@ export const ContextMenuRenderer = (props: {
     useMutation<mapContextMenuRendererMapTokenAddManyMutation>(
       MapContextMenuRendererMapTokenAddManyMutation
     );
+  const [updateManyTokens] =
+    useMutation<mapContextMenuRendererUpdateManyMutation>(
+      MapContextMenuRendererUpdateManyMutation
+    );
 
-  if (state === null) {
-    return null;
-  }
+  if (state === null) return null;
 
-  const pasteNode = (
+  // Panel is only visible when a token is selected AND not hidden
+  const panelIsVisible = !propertiesPanelHidden && selectedItems.size > 0;
+
+  const mi = (
+    color: string,
+    hoverBg: string,
+    onClick: () => void,
+    children: React.ReactNode
+  ) => (
     <MenuItem
-      isDisabled={copyContent.size === 0}
-      onClick={() => {
-        let centerX = 0;
-        let centerY = 0;
-        for (const item of copyContent) {
-          centerX += item.x;
-          centerY += item.y;
-        }
-        centerX /= copyContent.size;
-        centerY /= copyContent.size;
+      bg="transparent"
+      color={color}
+      _hover={{ bg: hoverBg, color: "#ffffff" }}
+      onClick={onClick}
+    >
+      {children}
+    </MenuItem>
+  );
 
-        const tokens: Array<MapTokenAddManyTokenInput> = [];
-        for (const token of copyContent) {
-          const centerRelativeX = token.x - centerX;
-          const centerRelativeY = token.y - centerY;
-          tokens.push({
-            x: state.imagePosition.x + centerRelativeX,
-            y: state.imagePosition.y + centerRelativeY,
-            rotation: token.rotation,
+  const duplicateToken = (tokenId: string, offsetX = 15, offsetY = 15) => {
+    const token = map.tokens.find((t) => t.id === tokenId);
+    if (!token) return;
+    mapTokenAddMany({
+      variables: {
+        input: {
+          mapId: map.id,
+          tokens: [
+            {
+              x: token.x + offsetX,
+              y: token.y + offsetY,
+              color: token.color,
+              label: token.label,
+              radius: token.radius,
+              rotation: token.rotation,
+              isVisibleForPlayers: token.isVisibleForPlayers,
+              isMovableByPlayers: token.isMovableByPlayers,
+              isLocked: token.isLocked,
+              tokenType: token.tokenType as any,
+              imageUrl: token.imageUrl ?? undefined,
+            },
+          ],
+        },
+      },
+    });
+  };
+
+  const duplicateSelection = () => {
+    const tokens = map.tokens.filter((t) => selectedItems.has(t.id));
+    mapTokenAddMany({
+      variables: {
+        input: {
+          mapId: map.id,
+          tokens: tokens.map((token) => ({
+            x: token.x + 15,
+            y: token.y + 15,
             color: token.color,
             label: token.label,
             radius: token.radius,
+            rotation: token.rotation,
             isVisibleForPlayers: token.isVisibleForPlayers,
             isMovableByPlayers: token.isMovableByPlayers,
             isLocked: token.isLocked,
-            tokenImageId: token.tokenImageId,
-          });
-        }
-        mapTokenAddMany({
-          variables: {
-            input: {
-              mapId: map.id,
-              tokens,
-            },
-          },
-        });
-      }}
-    >
-      Coller le token
-      {copyContent.size <= 1 ? "" : `s (${copyContent.size})`}
-    </MenuItem>
-  );
+            tokenType: token.tokenType as any,
+            imageUrl: token.imageUrl ?? undefined,
+          })),
+        },
+      },
+    });
+  };
 
   return (
     <Box
@@ -147,70 +191,105 @@ export const ContextMenuRenderer = (props: {
       onContextMenu={(ev) => ev.preventDefault()}
     >
       <Menu defaultIsOpen={true} onClose={() => showContextMenu(null)}>
-        <MenuList>
-          {selectedItems.size ? (
+        <MenuList
+          bg="#1a1a2e"
+          borderColor="#333366"
+          boxShadow="0 4px 20px rgba(0,0,0,0.6)"
+          py="4px"
+          minW="200px"
+        >
+          {state.target?.type === "token" ? (() => {
+            const token = map.tokens.find((t) => t.id === state.target?.id);
+            const isVisible = token?.isVisibleForPlayers ?? false;
+            const isLabelHidden = hiddenLabelTokenIds.has(state.target.id);
+            const hasMultiSelection = selectedItems.size > 1 && selectedItems.has(state.target.id);
+            return (
+              <>
+                {mi(isVisible ? "#fbbf24" : "#86efac", "#2a2a4e", () => {
+                  updateManyTokens({
+                    variables: {
+                      input: {
+                        mapId: map.id,
+                        tokenIds: [state.target!.id],
+                        properties: { isVisibleForPlayers: !isVisible },
+                      },
+                    },
+                  });
+                }, isVisible ? "👁 Masquer aux joueurs" : "👁 Afficher aux joueurs")}
+                {mi("#ddddff", "#2a2a4e",
+                  () => toggleLabelVisibility(state.target!.id),
+                  isLabelHidden ? "Afficher le texte" : "Masquer le texte"
+                )}
+                {mi("#ddddff", "#2a2a4e", togglePropertiesPanel,
+                  panelIsVisible ? "Masquer les propriétés" : "Afficher les propriétés"
+                )}
+                <MenuDivider borderColor="#333366" my="2px" />
+                {mi("#ddddff", "#2a2a4e",
+                  () => duplicateToken(state.target!.id),
+                  "Dupliquer"
+                )}
+                {hasMultiSelection && mi("#ddddff", "#2a2a4e", duplicateSelection,
+                  `Dupliquer la sélection (${selectedItems.size})`
+                )}
+                {hasMultiSelection && (
+                  <MenuItem
+                    bg="transparent"
+                    color="#ff6b6b"
+                    _hover={{ bg: "#3a1a1a", color: "#ff9999" }}
+                    onClick={() => {
+                      clearSelectedItems();
+                      mapTokenDeleteMany({
+                        variables: {
+                          input: { mapId: map.id, tokenIds: Array.from(selectedItems.keys()) },
+                        },
+                      });
+                    }}
+                  >
+                    Supprimer la sélection ({selectedItems.size})
+                  </MenuItem>
+                )}
+                <MenuItem
+                  bg="transparent"
+                  color="#ff6b6b"
+                  _hover={{ bg: "#3a1a1a", color: "#ff9999" }}
+                  onClick={() => {
+                    mapTokenDeleteMany({
+                      variables: {
+                        input: { mapId: map.id, tokenIds: [state.target!.id] },
+                      },
+                    });
+                  }}
+                >
+                  Supprimer
+                </MenuItem>
+              </>
+            );
+          })() : selectedItems.size > 0 ? (
             <>
-              {pasteNode}
+              {mi("#ddddff", "#2a2a4e", togglePropertiesPanel,
+                panelIsVisible ? "Masquer les propriétés" : "Afficher les propriétés"
+              )}
+              <MenuDivider borderColor="#333366" my="2px" />
+              {mi("#ddddff", "#2a2a4e", duplicateSelection,
+                `Dupliquer la sélection (${selectedItems.size})`
+              )}
               <MenuItem
-                onClick={() => {
-                  const tokenIds = new Set(selectedItems.keys());
-                  const tokens = getTokens(tokenIds);
-                  setCopyContent(new Set(tokens.values()));
-                }}
-                isDisabled={selectedItems.size == 0}
-              >
-                Copier les tokens ({selectedItems.size})
-              </MenuItem>
-              <MenuItem
+                bg="transparent"
+                color="#ff6b6b"
+                _hover={{ bg: "#3a1a1a", color: "#ff9999" }}
                 onClick={() => {
                   clearSelectedItems();
                   mapTokenDeleteMany({
                     variables: {
-                      input: {
-                        mapId: map.id,
-                        tokenIds: Array.from(selectedItems.keys()),
-                      },
+                      input: { mapId: map.id, tokenIds: Array.from(selectedItems.keys()) },
                     },
                   });
                 }}
-                isDisabled={selectedItems.size == 0}
               >
-                Supprimer les tokens ({selectedItems.size})
+                Supprimer la sélection ({selectedItems.size})
               </MenuItem>
             </>
-          ) : state.target?.type === "token" ? (
-            <>
-              <MenuItem
-                onClick={() => {
-                  if (state.target?.id) {
-                    const tokens = getTokens(new Set([state.target.id]));
-                    setCopyContent(new Set(tokens.values()));
-                  }
-                }}
-              >
-                Copier le token
-              </MenuItem>
-
-              <MenuItem
-                onClick={() => {
-                  if (state.target?.id) {
-                    mapTokenDeleteMany({
-                      variables: {
-                        input: {
-                          mapId: map.id,
-                          tokenIds: [state.target.id],
-                        },
-                      },
-                    });
-                  }
-                }}
-              >
-                Supprimer
-              </MenuItem>
-            </>
-          ) : (
-            pasteNode
-          )}
+          ) : null}
         </MenuList>
       </Menu>
     </Box>

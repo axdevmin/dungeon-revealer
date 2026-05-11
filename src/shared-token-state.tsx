@@ -9,6 +9,10 @@ export type SharedTokenStateStore = {
   setSelectedItem: (tokenId: string, store: LevaStoreType) => void;
   clearSelectedItems: () => void;
   removeSelectItem: (tokenId: string) => void;
+  propertiesPanelHidden: boolean;
+  togglePropertiesPanel: () => void;
+  hiddenLabelTokenIds: Set<string>;
+  toggleLabelVisibility: (tokenId: string) => void;
 };
 
 const createStore = () =>
@@ -39,6 +43,19 @@ const createStore = () =>
         selectedItems.delete(tokenId);
         set({ selectedItems });
       }
+    },
+    propertiesPanelHidden: false,
+    togglePropertiesPanel: () =>
+      set((s) => ({ propertiesPanelHidden: !s.propertiesPanelHidden })),
+    hiddenLabelTokenIds: new Set(),
+    toggleLabelVisibility: (tokenId) => {
+      const ids = new Set(get().hiddenLabelTokenIds);
+      if (ids.has(tokenId)) {
+        ids.delete(tokenId);
+      } else {
+        ids.add(tokenId);
+      }
+      set({ hiddenLabelTokenIds: ids });
     },
   }));
 
@@ -124,3 +141,24 @@ const selectedItemsSelector = (store: SharedTokenStateStore) =>
   [store.selectedItems, store.clearSelectedItems] as const;
 export const useSelectedItems = () =>
   useSharedTokenStateStoreStrict()(selectedItemsSelector, shallow);
+
+const noopToggle = () => undefined;
+const emptySet = new Set<string>();
+
+const propertiesPanelSelector = (store: SharedTokenStateStore) =>
+  [store.propertiesPanelHidden, store.togglePropertiesPanel] as const;
+export const usePropertiesPanel = () => {
+  const store = useSharedTokenStateStore();
+  return store
+    ? store(propertiesPanelSelector, shallow)
+    : ([false, noopToggle] as const);
+};
+
+const hiddenLabelSelector = (store: SharedTokenStateStore) =>
+  [store.hiddenLabelTokenIds, store.toggleLabelVisibility] as const;
+export const useHiddenLabels = () => {
+  const store = useSharedTokenStateStore();
+  return store
+    ? store(hiddenLabelSelector, shallow)
+    : ([emptySet, noopToggle] as const);
+};

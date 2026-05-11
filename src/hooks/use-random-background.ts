@@ -1,7 +1,6 @@
 import * as React from "react";
 
 const BACKGROUND_IMAGES = [
-  "navis-background.jpg",
   "combat_nains_mines.png",
   "darnell_jeune_chasse.png",
   "darnell_jeune_epee.png",

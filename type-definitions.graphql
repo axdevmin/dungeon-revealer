@@ -355,6 +355,20 @@ type MapToken {
   isLocked: Boolean!
   tokenImage: TokenImage
   referenceId: ID
+  tokenType: TokenType!
+  isAlive: Boolean!
+  imageUrl: String
+}
+
+"""
+The type of token placed on the map.
+"""
+enum TokenType {
+  character
+  creature
+  object
+  hazard
+  marker
 }
 
 """
@@ -669,6 +683,21 @@ input MapTokenUpdateManyPropertiesInput {
   Rotation to be updated. Will not be updated if null is provided.
   """
   rotation: Float
+
+  """
+  Token type to be updated.
+  """
+  tokenType: TokenType
+
+  """
+  Whether the token is alive. Applies to character/creature.
+  """
+  isAlive: Boolean
+
+  """
+  Static image URL for bundled preset images.
+  """
+  imageUrl: String
 }
 
 input MapTokenRemoveManyInput {
@@ -699,6 +728,9 @@ input MapTokenAddManyTokenInput {
   isMovableByPlayers: Boolean
   isLocked: Boolean
   tokenImageId: ID
+  tokenType: TokenType
+  isAlive: Boolean
+  imageUrl: String
 }
 
 type MapImageRequestUploadResult {

@@ -31,6 +31,15 @@ const prepareToken = (token: { [key: string]: unknown }) => {
   if ("tokenImageId" in token === false) {
     token.tokenImageId = null;
   }
+  if (typeof token.tokenType !== "string") {
+    token.tokenType = "marker";
+  }
+  if (token.isAlive === undefined) {
+    token.isAlive = true;
+  }
+  if ("imageUrl" in token === false) {
+    token.imageUrl = null;
+  }
 
   return token;
 };
@@ -43,6 +52,13 @@ export type MapGridEntity = {
   columnHeight: number;
 };
 
+export type TokenType =
+  | "character"
+  | "creature"
+  | "object"
+  | "hazard"
+  | "marker";
+
 export type MapTokenEntity = {
   id: string;
   radius: number;
@@ -54,6 +70,9 @@ export type MapTokenEntity = {
   isVisibleForPlayers: boolean;
   isMovableByPlayers: boolean;
   isLocked: boolean;
+  isAlive: boolean;
+  tokenType: TokenType;
+  imageUrl: string | null;
   reference: null | {
     type: "note";
     id: string;
@@ -441,6 +460,9 @@ export class Maps {
       type?: "entity" | null;
       tokenImageId?: null | string;
       rotation?: number | null;
+      tokenType?: TokenType | null;
+      isAlive?: boolean | null;
+      imageUrl?: string | null;
     }>
   ) {
     return await this._processTask<{ tokens: Array<any> }>(
@@ -466,6 +488,9 @@ export class Maps {
             type: props.type ?? "entity",
             tokenImageId: props.tokenImageId ?? null,
             rotation: props.rotation ?? 0,
+            tokenType: props.tokenType ?? "marker",
+            isAlive: props.isAlive ?? true,
+            imageUrl: props.imageUrl ?? null,
           };
 
           newTokens.push(token);
@@ -501,6 +526,9 @@ export class Maps {
       reference,
       tokenImageId,
       rotation,
+      tokenType,
+      isAlive,
+      imageUrl,
     }: {
       type?: string;
       x?: number;
@@ -522,6 +550,9 @@ export class Maps {
           };
       tokenImageId?: null | string;
       rotation?: number;
+      tokenType?: TokenType;
+      isAlive?: boolean;
+      imageUrl?: string | null;
     }
   ) {
     return await this._processTask<{ map: MapEntity; token: unknown }>(
@@ -588,6 +619,15 @@ export class Maps {
         if (rotation !== undefined) {
           token.rotation = rotation;
         }
+        if (tokenType !== undefined) {
+          token.tokenType = tokenType;
+        }
+        if (isAlive !== undefined) {
+          token.isAlive = isAlive;
+        }
+        if (imageUrl !== undefined) {
+          token.imageUrl = imageUrl;
+        }
 
         const updatedMap = await this._updateMapSettings(map, {
           tokens: map.tokens,
@@ -610,6 +650,9 @@ export class Maps {
       isMovableByPlayers: boolean | undefined;
       tokenImageId: string | null | undefined;
       rotation: number | undefined;
+      tokenType: TokenType | undefined;
+      isAlive: boolean | undefined;
+      imageUrl: string | null | undefined;
     }
   ) {
     return await this._processTask(`map:${mapId}`, async () => {
@@ -645,6 +688,15 @@ export class Maps {
         }
         if (props.rotation !== undefined) {
           token.rotation = props.rotation;
+        }
+        if (props.tokenType !== undefined) {
+          token.tokenType = props.tokenType;
+        }
+        if (props.isAlive !== undefined) {
+          token.isAlive = props.isAlive;
+        }
+        if (props.imageUrl !== undefined) {
+          token.imageUrl = props.imageUrl;
         }
       }
 

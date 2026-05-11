@@ -3,7 +3,13 @@ import * as RT from "fp-ts/lib/ReaderTask";
 import { randomUUID } from "crypto";
 import * as path from "path";
 import * as fs from "fs-extra";
-import type { MapEntity, MapGridEntity, Maps, WeatherSettings } from "./maps";
+import type {
+  MapEntity,
+  MapGridEntity,
+  Maps,
+  TokenType,
+  WeatherSettings,
+} from "./maps";
 import * as auth from "./auth";
 import type { Settings } from "./settings";
 import { invalidateResourcesRT } from "./live-query-store";
@@ -30,6 +36,9 @@ export const updateManyMapToken = (params: {
     isMovableByPlayers: boolean | undefined;
     tokenImageId: string | null | undefined;
     rotation: number | undefined;
+    tokenType: TokenType | undefined;
+    isAlive: boolean | undefined;
+    imageUrl: string | null | undefined;
   };
 }) =>
   pipe(
@@ -43,6 +52,9 @@ export const updateManyMapToken = (params: {
           isMovableByPlayers: params.props.isMovableByPlayers,
           tokenImageId: params.props.tokenImageId,
           rotation: params.props.rotation,
+          tokenType: params.props.tokenType,
+          isAlive: params.props.isAlive,
+          imageUrl: params.props.imageUrl,
         })
     ),
     RT.chainW(() => invalidateResourcesRT([`Map:${params.mapId}`])),

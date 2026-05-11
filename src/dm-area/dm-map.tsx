@@ -94,6 +94,7 @@ import { dmMap_GridConfigurator_MapFragment$key } from "./__generated__/dmMap_Gr
 import { dmMap_MapPingMutation } from "./__generated__/dmMap_MapPingMutation.graphql";
 import { WeatherControls } from "./weather-controls";
 import { dmMap_WeatherButton_MapFragment$key } from "./__generated__/dmMap_WeatherButton_MapFragment.graphql";
+import { TokenLibrary } from "./token-library";
 import { ErrorBoundary } from "../error-boundary";
 import { UpdateTokenContext } from "../update-token-context";
 import { IsDungeonMasterContext } from "../is-dungeon-master-context";
@@ -522,6 +523,30 @@ const TokenMarkerSettings = (): React.ReactElement => {
         oneLineLabels
         hideCopyButton
       />
+    </div>
+  );
+};
+
+const TokenLibraryButton = (): React.ReactElement => {
+  const [isOpen, setIsOpen] = React.useState(false);
+  const ref = React.useRef<HTMLDivElement>(null);
+  useOnClickOutside(ref, () => setIsOpen(false));
+
+  return (
+    <div ref={ref} style={{ position: "relative" }}>
+      <Toolbar.Item isActive>
+        <Toolbar.Button onClick={() => setIsOpen((v) => !v)}>
+          <span style={{ fontSize: "18px", lineHeight: 1 }}>🎭</span>
+          <Icon.Label>Tokens</Icon.Label>
+        </Toolbar.Button>
+      </Toolbar.Item>
+      {isOpen ? (
+        <div
+          style={{ position: "absolute", bottom: "100%", left: 0, zIndex: 10 }}
+        >
+          <TokenLibrary />
+        </div>
+      ) : null}
     </div>
   );
 };
@@ -998,6 +1023,7 @@ export const DmMap = (props: {
                   }}
                 />
                 <WeatherButton map={map} />
+                <TokenLibraryButton />
                 <Toolbar.Item isActive>
                   <Toolbar.Button
                     onClick={() => {
