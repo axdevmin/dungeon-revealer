@@ -29,14 +29,12 @@ const TokenInfoSideBar_NotesFragment = graphql`
     count: { type: "Int", defaultValue: 20 }
     cursor: { type: "String" }
     filter: { type: "NotesFilter" }
-    key: { type: "String!" }
   )
   @refetchable(queryName: "tokenInfoSideBar_MoreNotesQuery") {
     notes(first: $count, after: $cursor, filter: $filter)
       @connection(
         key: "tokenInfoSideBar_notes"
-        filters: []
-        dynamicKey_UNSTABLE: $key
+        filters: ["filter"]
       ) {
       __id
       edges {
@@ -55,8 +53,8 @@ const TokenInfoSideBar_NotesFragment = graphql`
 `;
 
 const TokenInfoSideBar_NotesQuery = graphql`
-  query tokenInfoSideBar_NotesQuery($filter: NotesFilter!, $key: String!) {
-    ...tokenInfoSideBar_NotesFragment @arguments(filter: $filter, key: $key)
+  query tokenInfoSideBar_NotesQuery($filter: NotesFilter!) {
+    ...tokenInfoSideBar_NotesFragment @arguments(filter: $filter)
   }
 `;
 
@@ -258,7 +256,6 @@ export const TokenInfoSideBar = (props: {
     TokenInfoSideBar_NotesQuery,
     {
       filter: showAll ? "All" : "Entrypoint",
-      key: `window-${props.windowId}`,
     }
   );
   const notesSearchResult = useQuery<tokenInfoSideBar_SearchQuery>(
