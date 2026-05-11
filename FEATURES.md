@@ -1,0 +1,75 @@
+# Navis — Roadmap
+
+> Dernière mise à jour : 2026-05-06
+
+---
+
+## ✅ Fait
+
+- **Météo** — pluie, orage, neige, soleil. Intensité + angle vent. Sync DM→joueurs via GraphQL live.
+- **Brouillard de guerre organique** — shader GLSL avec FBM + domain warping. Vue DM et joueurs séparées.
+- **UI transparente unifiée** — glassmorphism (backdrop-filter blur) sur tous les toolbars DM et joueur, boutons chat. Prop `transparent` dans `Toolbar`. Badge version masqué côté joueur.
+- **Toolbar joueur rétractable** — chevron indicateur, clic sur logo, drag & drop.
+- **Simplification UI joueur** — suppression Notes et Recherche (DM uniquement). Recherche masquée côté joueur via `useViewerRole()`.
+- **Sécurité** — express, socket.io, vite 8, Node 20 LTS. Vulnérabilités : 47 → 13 (−72%).
+
+---
+
+## 📋 Todo
+
+### Haute priorité
+
+- [ ] **Effets de zone** — feu, explosion, foudre, eau (Three.js, persistants DB, mutations `mapEffectAdd/Remove`)
+- [ ] **Sceau magique au sol** — rune / cercle magique persistant sur la carte, dessiné par le DM, couleur + intensité configurable, rendu Three.js (ShaderMaterial ou sprite animé)
+- [ ] **Zones météo exclues** — le DM délimite des polygones/rectangles sur la carte où la météo ne s'applique pas (intérieur, sous un toit) ; les particules pluie/neige sont clippées hors de ces zones
+- [ ] **Éclairage dynamique** — sources lumineuses DM, halo animé, radius + couleur, impact tokens
+- [ ] **Portes & Murs** — entités sur carte, état ouvert/fermé, bloquant la vision
+- [ ] **Docker Compose** — `docker-compose.yml` + `.env.example`, déploiement one-liner
+- [ ] **CI pipeline** — GitHub Actions : lint + tests + build Docker sur chaque PR
+
+### Moyenne priorité
+
+- [ ] **Tokens enrichis** — portrait, classe, barre de vie configurable par le DM
+- [ ] **État mort** — token grisé + icône, reste visible, filtrable
+- [ ] **Dialogue bubbles** — bulle texte au-dessus d'un token, durée configurable
+- [ ] **Ping amélioré** — curseur animé avec nom du joueur (ping basique dans `dm-map.tsx`)
+
+### Basse priorité
+
+- [ ] **Sons d'ambiance** — bibliothèque de sons intégrés (taverne, forêt, grotte…), sélection par scène, lecture en boucle avec volume réglable, possibilité d'ajouter des fichiers audio personnalisés (upload DM)
+- [ ] **Indicateurs sonores** — icône source sonore sur la carte (ambiance, musique de zone)
+- [ ] **Hosting docs** — guide déploiement VPS / Fly.io / Railway
+- [ ] **GitHub Kanban** — issues + project board
+
+---
+
+## 🔒 Dettes techniques
+
+| Problème                          | Impact     | Notes                                           |
+| --------------------------------- | ---------- | ----------------------------------------------- |
+| `immutable@3` (relay-compiler@10) | Build only | Bloqué — nécessite migration relay complète     |
+| `relay-compiler@10` → v13+        | Build only | Migration majeure (TypeScript natif, types)     |
+| React 17 → 18                     | Perf       | Breaking: react-three-fiber v5→v8, Chakra v1→v3 |
+| Three.js 0.126 → 0.184            | Perf + API | 58 versions, nombreuses API dépréciées          |
+| `react-showdown` MODERATE         | Dev only   | Aucun fix upstream                              |
+
+**Vulnérabilités restantes : 13** — HIGH×2 (immutable@3, dev uniquement) · MODERATE×2 (showdown ReDoS) · LOW×9 (jest@27, morgan)
+
+---
+
+## 🏗 Architecture
+
+- **Relay + GraphQL** live queries via `invalidateResourcesRT()`
+- **react-three-fiber v5** — Canvas isolé, `ContextBridge`
+- **Three.js 0.126** — `DynamicDrawUsage` + particle systems
+- **GLSL** — fog avec `noise2D` + fbm + domain warping
+- **SQLite3 6** + 4 migrations versionnées (`server/migrations/`)
+- **patch-package** — patches engine.io, react-spring/three, relay-compiler, use-sound
+
+```bash
+npm install
+npm run setup                 # write-schema + relay-compiler
+npm run start:server:dev      # port 3000
+npm run start:frontend:dev    # port 4000
+npm run build
+```
