@@ -25,6 +25,7 @@
     "setup": "npm run write-schema && npm run relay-compiler",
     "start": "node ./bin/navis",
     "test": "jest --passWithNoTests",
+    "dev": "npm run start:server:dev & npm run start:frontend:dev",
     "start:frontend:dev": "vite",
     "start:server:dev": "ts-node-dev --project server/tsconfig.json --no-deps server/index.ts",
     "relay-compiler": "relay-compiler --schema type-definitions.graphql --src src --language typescript",
