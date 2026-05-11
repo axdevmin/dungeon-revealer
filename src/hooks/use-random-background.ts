@@ -1,16 +1,19 @@
 import * as React from "react";
 
 const BACKGROUND_IMAGES = [
-  "ChatGPT Image 3 mai 2026, 15_52_27.png",
-  "ChatGPT Image 6 mai 2026, 20_54_16.png",
-  "ChatGPT Image 8 mai 2026, 15_40_22.png",
-  "ChatGPT Image 8 mai 2026, 15_42_35.png",
-  "ChatGPT Image 9 mai 2026, 15_25_37.png",
-  "ChatGPT Image 9 mai 2026, 15_28_49.png",
-  "ChatGPT Image 10 mai 2026, 19_04_27.png",
-  "ChatGPT Image 10 mai 2026, 19_06_20.png",
-  "ChatGPT Image 10 mai 2026, 19_10_11.png",
   "navis-background.jpg",
+  "combat_nains_mines.png",
+  "darnell_jeune_chasse.png",
+  "darnell_jeune_epee.png",
+  "darnell_jeune_lecture.png",
+  "darnell_victorieux_arene.png",
+  "groupe_boite_magique.png",
+  "groupe_grange.png",
+  "groupe_khaelen_vol.png",
+  "groupe_taverne.png",
+  "lidda_bunnar.png",
+  "reve_khaelen.png",
+  "tempete_navire.png",
 ];
 
 export const useRandomBackground = (): string => {
