@@ -28,7 +28,7 @@ const InputLabel = styled.label`
   display: flex;
   font-size: 24px;
   margin-bottom: 12px;
-  box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
   max-width: 600px;
   width: 100%;
   margin-left: auto;
@@ -39,7 +39,7 @@ const InputLabel = styled.label`
 const IconContainer = styled.div`
   border-top-left-radius: 5px;
   border-bottom-left-radius: 5px;
-  background-color: white;
+  background-color: #1a1b2e;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -82,27 +82,27 @@ const ResultContainer = styled.div`
   flex-wrap: wrap;
   margin-left: auto;
   margin-right: auto;
-  background-color: #fff;
+  background-color: #1a1b2e;
 `;
 
 const Result = styled.button`
   display: block;
   text-align: left;
   cursor: pointer;
-  background-color: #fff;
-  box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+  background-color: #1a1b2e;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
   padding: 0;
   border: 0;
   padding-bottom: 4px;
   padding-top: 4px;
-  border-bottom: 1px solid lightgray;
+  border-bottom: 1px solid #333366;
   width: 100%;
   padding-left: 12px;
   padding-right: 12px;
 
   &:hover,
   &:focus {
-    background-color: ${darken(0.1, "#fff")};
+    background-color: #2a2a4e;
   }
 
   &:first-of-type {

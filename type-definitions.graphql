@@ -357,6 +357,7 @@ type MapToken {
   referenceId: ID
   tokenType: TokenType!
   isAlive: Boolean!
+  imageUrl: String
 }
 
 """
@@ -692,6 +693,11 @@ input MapTokenUpdateManyPropertiesInput {
   Whether the token is alive. Applies to character/creature.
   """
   isAlive: Boolean
+
+  """
+  Static image URL for bundled preset images.
+  """
+  imageUrl: String
 }
 
 input MapTokenRemoveManyInput {
@@ -724,6 +730,7 @@ input MapTokenAddManyTokenInput {
   tokenImageId: ID
   tokenType: TokenType
   isAlive: Boolean
+  imageUrl: String
 }
 
 type MapImageRequestUploadResult {

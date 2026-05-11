@@ -22,6 +22,7 @@ import { DmMap } from "./dm-map";
 import { Socket } from "socket.io-client";
 import { MapTokenEntity } from "../map-typings";
 import { isFileDrag } from "../hooks/use-drop-zone";
+import { LIBRARY_DRAG_TYPE, TokenPreset } from "./token-library";
 import { useRandomBackground } from "../hooks/use-random-background";
 import { useNoteWindowActions } from "./token-info-aside";
 import { MapControlInterface } from "../map-view";
@@ -375,27 +376,61 @@ const Content = ({
               ev.preventDefault();
             }}
             onDragOver={(ev) => {
-              if (isFileDrag(ev) === false) {
+              const isLibraryDrag = ev.dataTransfer.types.includes(
+                LIBRARY_DRAG_TYPE
+              );
+              if (!isFileDrag(ev) && !isLibraryDrag) {
                 return;
               }
               ev.preventDefault();
             }}
             onDrop={(ev) => {
               ev.preventDefault();
-              if (isFileDrag(ev) === false) {
+
+              const context = controlRef.current?.getContext();
+              if (!context) return;
+
+              const presetJson = ev.dataTransfer.getData(LIBRARY_DRAG_TYPE);
+              if (presetJson) {
+                const preset = JSON.parse(presetJson) as TokenPreset;
+                const coords = context.helper.coordinates.screenToImage([
+                  ev.clientX,
+                  ev.clientY,
+                ]);
+                commitMutation<dmAreaTokenAddManyMutation>(relayEnvironment, {
+                  mutation: DmAreaTokenAddManyMutation,
+                  variables: {
+                    input: {
+                      mapId: dmAreaResponse.data!.map!.id,
+                      tokens: [
+                        {
+                          color: preset.color,
+                          x: coords[0],
+                          y: coords[1],
+                          rotation: 0,
+                          label: preset.label,
+                          isVisibleForPlayers: false,
+                          isMovableByPlayers: false,
+                          isLocked: false,
+                          tokenType: preset.tokenType,
+                          isAlive: true,
+                          imageUrl: preset.imageUrl,
+                        },
+                      ],
+                    },
+                  },
+                });
                 return;
               }
+
+              if (!isFileDrag(ev)) return;
+
               dragRef.current = 0;
               setIsDraggingFile(dragRef.current !== 0);
 
               const [file] = Array.from(ev.dataTransfer.files);
 
               if (!file?.type.match(/image/)) {
-                return;
-              }
-              const context = controlRef.current?.getContext();
-
-              if (!context) {
                 return;
               }
               const coords = context.helper.coordinates.screenToImage([
@@ -411,7 +446,7 @@ const Content = ({
                       mapId: dmAreaResponse.data!.map!.id,
                       tokens: [
                         {
-                          color: "red",
+                          color: "#3355cc",
                           x: coords[0],
                           y: coords[1],
                           rotation: 0,
@@ -419,6 +454,7 @@ const Content = ({
                           isMovableByPlayers: false,
                           isLocked: false,
                           tokenImageId,
+                          tokenType: "character",
                           label: "",
                         },
                       ],

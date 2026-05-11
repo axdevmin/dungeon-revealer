@@ -1,9 +1,7 @@
 import * as React from "react";
-import graphql from "babel-plugin-relay/macro";
-import { useMutation } from "relay-hooks";
 import styled from "@emotion/styled/macro";
 import type { TokenType } from "../map-typings";
-import type { tokenLibraryAddTokenMutation } from "./__generated__/tokenLibraryAddTokenMutation.graphql";
+import { buildUrl } from "../public-url";
 
 const TOKEN_TYPE_COLORS: Record<TokenType, string> = {
   character: "#4488ff",
@@ -13,11 +11,12 @@ const TOKEN_TYPE_COLORS: Record<TokenType, string> = {
   marker: "#aa44ff",
 };
 
-type TokenPreset = {
+export type TokenPreset = {
   label: string;
   tokenType: TokenType;
   color: string;
   emoji: string;
+  imageUrl: string;
 };
 
 const LIBRARY: Array<{ category: string; tokens: TokenPreset[] }> = [
@@ -29,84 +28,189 @@ const LIBRARY: Array<{ category: string; tokens: TokenPreset[] }> = [
         tokenType: "character",
         color: "#3355cc",
         emoji: "⚔",
+        imageUrl: buildUrl("/images/tokens/warrior.svg"),
       },
-      { label: "Mage", tokenType: "character", color: "#8833cc", emoji: "✨" },
+      {
+        label: "Mage",
+        tokenType: "character",
+        color: "#8833cc",
+        emoji: "✨",
+        imageUrl: buildUrl("/images/tokens/mage.svg"),
+      },
       {
         label: "Rôdeur",
         tokenType: "character",
         color: "#336633",
         emoji: "🏹",
+        imageUrl: buildUrl("/images/tokens/ranger.svg"),
       },
-      { label: "Clerc", tokenType: "character", color: "#ccaa33", emoji: "✝" },
+      {
+        label: "Clerc",
+        tokenType: "character",
+        color: "#ccaa33",
+        emoji: "✝",
+        imageUrl: buildUrl("/images/tokens/cleric.svg"),
+      },
       {
         label: "Roublard",
         tokenType: "character",
         color: "#333333",
         emoji: "🗡",
+        imageUrl: buildUrl("/images/tokens/rogue.svg"),
       },
       {
         label: "Barbare",
         tokenType: "character",
         color: "#993333",
         emoji: "💪",
+        imageUrl: buildUrl("/images/tokens/barbarian.svg"),
       },
     ],
   },
   {
     category: "Créatures",
     tokens: [
-      { label: "Dragon", tokenType: "creature", color: "#cc2222", emoji: "🐉" },
+      {
+        label: "Dragon",
+        tokenType: "creature",
+        color: "#cc2222",
+        emoji: "🐉",
+        imageUrl: buildUrl("/images/tokens/dragon.svg"),
+      },
       {
         label: "Gobelin",
         tokenType: "creature",
         color: "#44aa44",
         emoji: "👺",
+        imageUrl: buildUrl("/images/tokens/goblin.svg"),
       },
       {
         label: "Mort-Vivant",
         tokenType: "creature",
         color: "#557755",
         emoji: "💀",
+        imageUrl: buildUrl("/images/tokens/undead.svg"),
       },
-      { label: "Démon", tokenType: "creature", color: "#880022", emoji: "😈" },
-      { label: "Loup", tokenType: "creature", color: "#776655", emoji: "🐺" },
+      {
+        label: "Démon",
+        tokenType: "creature",
+        color: "#880022",
+        emoji: "😈",
+        imageUrl: buildUrl("/images/tokens/demon.svg"),
+      },
+      {
+        label: "Loup",
+        tokenType: "creature",
+        color: "#776655",
+        emoji: "🐺",
+        imageUrl: buildUrl("/images/tokens/wolf.svg"),
+      },
       {
         label: "Araignée",
         tokenType: "creature",
         color: "#222222",
         emoji: "🕷",
+        imageUrl: buildUrl("/images/tokens/spider.svg"),
       },
     ],
   },
   {
     category: "Objets",
     tokens: [
-      { label: "Coffre", tokenType: "object", color: "#886633", emoji: "📦" },
-      { label: "Torche", tokenType: "object", color: "#cc7722", emoji: "🕯" },
-      { label: "Potion", tokenType: "object", color: "#cc3366", emoji: "⚗" },
-      { label: "Tonneau", tokenType: "object", color: "#774433", emoji: "🍺" },
-      { label: "Porte", tokenType: "object", color: "#664422", emoji: "🚪" },
-      { label: "Autel", tokenType: "object", color: "#555577", emoji: "⛩" },
+      {
+        label: "Coffre",
+        tokenType: "object",
+        color: "#886633",
+        emoji: "📦",
+        imageUrl: buildUrl("/images/tokens/chest.svg"),
+      },
+      {
+        label: "Torche",
+        tokenType: "object",
+        color: "#cc7722",
+        emoji: "🕯",
+        imageUrl: buildUrl("/images/tokens/torch.svg"),
+      },
+      {
+        label: "Potion",
+        tokenType: "object",
+        color: "#cc3366",
+        emoji: "⚗",
+        imageUrl: buildUrl("/images/tokens/potion.svg"),
+      },
+      {
+        label: "Tonneau",
+        tokenType: "object",
+        color: "#774433",
+        emoji: "🍺",
+        imageUrl: buildUrl("/images/tokens/barrel.svg"),
+      },
+      {
+        label: "Porte",
+        tokenType: "object",
+        color: "#664422",
+        emoji: "🚪",
+        imageUrl: buildUrl("/images/tokens/door.svg"),
+      },
+      {
+        label: "Autel",
+        tokenType: "object",
+        color: "#555577",
+        emoji: "⛩",
+        imageUrl: buildUrl("/images/tokens/altar.svg"),
+      },
     ],
   },
   {
     category: "Dangers",
     tokens: [
-      { label: "Feu", tokenType: "hazard", color: "#dd4411", emoji: "🔥" },
-      { label: "Piège", tokenType: "hazard", color: "#cc8822", emoji: "⚙" },
-      { label: "Acide", tokenType: "hazard", color: "#88cc11", emoji: "☣" },
-      { label: "Glace", tokenType: "hazard", color: "#44aacc", emoji: "❄" },
-      { label: "Éclair", tokenType: "hazard", color: "#cccc11", emoji: "⚡" },
-      { label: "Poison", tokenType: "hazard", color: "#558833", emoji: "☠" },
+      {
+        label: "Feu",
+        tokenType: "hazard",
+        color: "#dd4411",
+        emoji: "🔥",
+        imageUrl: buildUrl("/images/tokens/fire.svg"),
+      },
+      {
+        label: "Piège",
+        tokenType: "hazard",
+        color: "#cc8822",
+        emoji: "⚙",
+        imageUrl: buildUrl("/images/tokens/trap.svg"),
+      },
+      {
+        label: "Acide",
+        tokenType: "hazard",
+        color: "#88cc11",
+        emoji: "☣",
+        imageUrl: buildUrl("/images/tokens/acid.svg"),
+      },
+      {
+        label: "Glace",
+        tokenType: "hazard",
+        color: "#44aacc",
+        emoji: "❄",
+        imageUrl: buildUrl("/images/tokens/ice.svg"),
+      },
+      {
+        label: "Éclair",
+        tokenType: "hazard",
+        color: "#cccc11",
+        emoji: "⚡",
+        imageUrl: buildUrl("/images/tokens/lightning.svg"),
+      },
+      {
+        label: "Poison",
+        tokenType: "hazard",
+        color: "#558833",
+        emoji: "☠",
+        imageUrl: buildUrl("/images/tokens/poison.svg"),
+      },
     ],
   },
 ];
 
-const AddTokenMutation = graphql`
-  mutation tokenLibraryAddTokenMutation($input: MapTokenAddManyInput!) {
-    mapTokenAddMany(input: $input)
-  }
-`;
+export const LIBRARY_DRAG_TYPE = "application/navis-token-preset";
 
 const PanelContainer = styled.div`
   background: #1a1a2e;
@@ -154,11 +258,11 @@ const TokenButton = styled.button<{ typeColor: string }>`
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  padding: 8px 4px 6px;
+  padding: 6px 4px 5px;
   background: #12122a;
   border: 2px solid ${(p) => p.typeColor};
   border-radius: 8px;
-  cursor: pointer;
+  cursor: grab;
   transition: background 0.15s, transform 0.1s;
   color: #ddddff;
   font-size: 10px;
@@ -173,42 +277,25 @@ const TokenButton = styled.button<{ typeColor: string }>`
 
   &:active {
     transform: scale(0.96);
+    cursor: grabbing;
   }
 `;
 
-const TokenEmoji = styled.div`
-  font-size: 22px;
-  line-height: 1;
+const TokenPreviewImage = styled.img`
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  pointer-events: none;
 `;
 
-export const TokenLibrary = (props: {
-  mapId: string;
-  mapCenterX: number;
-  mapCenterY: number;
-}) => {
-  const [addToken] =
-    useMutation<tokenLibraryAddTokenMutation>(AddTokenMutation);
-
-  const place = (preset: TokenPreset) => {
-    addToken({
-      variables: {
-        input: {
-          mapId: props.mapId,
-          tokens: [
-            {
-              x: props.mapCenterX,
-              y: props.mapCenterY,
-              color: preset.color,
-              label: preset.label,
-              tokenType: preset.tokenType,
-              isAlive: true,
-              isVisibleForPlayers: false,
-              isMovableByPlayers: false,
-            },
-          ],
-        },
-      },
-    });
+export const TokenLibrary = () => {
+  const onDragStart = (
+    ev: React.DragEvent<HTMLButtonElement>,
+    preset: TokenPreset
+  ) => {
+    ev.dataTransfer.setData(LIBRARY_DRAG_TYPE, JSON.stringify(preset));
+    ev.dataTransfer.effectAllowed = "copy";
   };
 
   return (
@@ -222,10 +309,15 @@ export const TokenLibrary = (props: {
               <TokenButton
                 key={preset.label}
                 typeColor={TOKEN_TYPE_COLORS[preset.tokenType]}
-                title={`Ajouter : ${preset.label}`}
-                onClick={() => place(preset)}
+                title={`Glisser pour placer : ${preset.label}`}
+                draggable
+                onDragStart={(ev) => onDragStart(ev, preset)}
               >
-                <TokenEmoji>{preset.emoji}</TokenEmoji>
+                <TokenPreviewImage
+                  src={preset.imageUrl}
+                  alt={preset.label}
+                  draggable={false}
+                />
                 {preset.label}
               </TokenButton>
             ))}

@@ -38,6 +38,7 @@ export const updateManyMapToken = (params: {
     rotation: number | undefined;
     tokenType: TokenType | undefined;
     isAlive: boolean | undefined;
+    imageUrl: string | null | undefined;
   };
 }) =>
   pipe(
@@ -53,6 +54,7 @@ export const updateManyMapToken = (params: {
           rotation: params.props.rotation,
           tokenType: params.props.tokenType,
           isAlive: params.props.isAlive,
+          imageUrl: params.props.imageUrl,
         })
     ),
     RT.chainW(() => invalidateResourcesRT([`Map:${params.mapId}`])),

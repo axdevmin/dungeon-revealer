@@ -37,6 +37,9 @@ const prepareToken = (token: { [key: string]: unknown }) => {
   if (token.isAlive === undefined) {
     token.isAlive = true;
   }
+  if ("imageUrl" in token === false) {
+    token.imageUrl = null;
+  }
 
   return token;
 };
@@ -69,6 +72,7 @@ export type MapTokenEntity = {
   isLocked: boolean;
   isAlive: boolean;
   tokenType: TokenType;
+  imageUrl: string | null;
   reference: null | {
     type: "note";
     id: string;
@@ -458,6 +462,7 @@ export class Maps {
       rotation?: number | null;
       tokenType?: TokenType | null;
       isAlive?: boolean | null;
+      imageUrl?: string | null;
     }>
   ) {
     return await this._processTask<{ tokens: Array<any> }>(
@@ -485,6 +490,7 @@ export class Maps {
             rotation: props.rotation ?? 0,
             tokenType: props.tokenType ?? "marker",
             isAlive: props.isAlive ?? true,
+            imageUrl: props.imageUrl ?? null,
           };
 
           newTokens.push(token);
@@ -522,6 +528,7 @@ export class Maps {
       rotation,
       tokenType,
       isAlive,
+      imageUrl,
     }: {
       type?: string;
       x?: number;
@@ -545,6 +552,7 @@ export class Maps {
       rotation?: number;
       tokenType?: TokenType;
       isAlive?: boolean;
+      imageUrl?: string | null;
     }
   ) {
     return await this._processTask<{ map: MapEntity; token: unknown }>(
@@ -617,6 +625,9 @@ export class Maps {
         if (isAlive !== undefined) {
           token.isAlive = isAlive;
         }
+        if (imageUrl !== undefined) {
+          token.imageUrl = imageUrl;
+        }
 
         const updatedMap = await this._updateMapSettings(map, {
           tokens: map.tokens,
@@ -641,6 +652,7 @@ export class Maps {
       rotation: number | undefined;
       tokenType: TokenType | undefined;
       isAlive: boolean | undefined;
+      imageUrl: string | null | undefined;
     }
   ) {
     return await this._processTask(`map:${mapId}`, async () => {
@@ -682,6 +694,9 @@ export class Maps {
         }
         if (props.isAlive !== undefined) {
           token.isAlive = props.isAlive;
+        }
+        if (props.imageUrl !== undefined) {
+          token.imageUrl = props.imageUrl;
         }
       }
 

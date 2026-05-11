@@ -527,19 +527,10 @@ const TokenMarkerSettings = (): React.ReactElement => {
   );
 };
 
-const TokenLibraryButton = (props: {
-  mapId: string;
-  controlRef: React.MutableRefObject<MapControlInterface | null>;
-}): React.ReactElement => {
+const TokenLibraryButton = (): React.ReactElement => {
   const [isOpen, setIsOpen] = React.useState(false);
   const ref = React.useRef<HTMLDivElement>(null);
   useOnClickOutside(ref, () => setIsOpen(false));
-
-  const getCenter = () => {
-    const ctx = props.controlRef.current?.getContext();
-    if (!ctx) return { x: 500, y: 500 };
-    return { x: ctx.dimensions.width / 2, y: ctx.dimensions.height / 2 };
-  };
 
   return (
     <div ref={ref} style={{ position: "relative" }}>
@@ -553,11 +544,7 @@ const TokenLibraryButton = (props: {
         <div
           style={{ position: "absolute", bottom: "100%", left: 0, zIndex: 10 }}
         >
-          <TokenLibrary
-            mapId={props.mapId}
-            mapCenterX={getCenter().x}
-            mapCenterY={getCenter().y}
-          />
+          <TokenLibrary />
         </div>
       ) : null}
     </div>
@@ -1036,7 +1023,7 @@ export const DmMap = (props: {
                   }}
                 />
                 <WeatherButton map={map} />
-                <TokenLibraryButton mapId={map.id} controlRef={controlRef} />
+                <TokenLibraryButton />
                 <Toolbar.Item isActive>
                   <Toolbar.Button
                     onClick={() => {

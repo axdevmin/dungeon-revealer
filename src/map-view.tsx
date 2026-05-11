@@ -39,6 +39,7 @@ import { ContextMenuState, useShowContextMenu } from "./map-context-menu";
 import {
   useClearTokenSelection,
   useTokenSelection,
+  useHiddenLabels,
 } from "./shared-token-state";
 import { useResetState } from "./hooks/use-reset-state";
 import { mapView_MapFragment$key } from "./__generated__/mapView_MapFragment.graphql";
@@ -210,6 +211,7 @@ const TokenRendererMapTokenFragment = graphql`
     isVisibleForPlayers
     tokenType
     isAlive
+    imageUrl
     tokenImage {
       id
       title
@@ -623,7 +625,7 @@ const TokenRenderer = (props: {
         ) {
           firstTimeStamp.current = null;
 
-          if (event.ctrlKey) {
+          if (event.ctrlKey || event.metaKey) {
             tokenSelection.toggleItem(props.id, store);
           } else {
             // left mouse
@@ -749,12 +751,36 @@ const TokenRenderer = (props: {
 
   const color =
     isHover && isMovable ? lighten(0.1, values.color) : values.color;
-  const textLabel = values.text;
+  const [hiddenLabelTokenIds] = useHiddenLabels();
+  const textLabel = hiddenLabelTokenIds.has(props.id) ? null : values.text;
   const tokenType = (values.tokenType as TokenType) ?? "marker";
   const isAlive = values.isAlive ?? true;
   const typeRingColor = TOKEN_TYPE_COLORS[tokenType] ?? "#aa44ff";
   const baseOpacity = values.isVisibleForPlayers ? 1 : 0.5;
   const deadOpacity = isAlive ? baseOpacity : baseOpacity * 0.4;
+  const resolvedImageUrl = token.tokenImage?.url ?? token.imageUrl ?? null;
+
+  const isUnderFog = React.useMemo(() => {
+    if (isDungeonMaster) return false;
+    const fogCanvas = sharedMapState.fogCanvas;
+    const ctx = fogCanvas.getContext("2d");
+    if (!ctx || fogCanvas.width === 0 || fogCanvas.height === 0) return false;
+    const fx = Math.round(token.x * sharedMapState.ratio);
+    const fy = Math.round(token.y * sharedMapState.ratio);
+    if (fx < 0 || fx >= fogCanvas.width || fy < 0 || fy >= fogCanvas.height)
+      return false;
+    const alpha = ctx.getImageData(fx, fy, 1, 1).data[3];
+    return alpha > 128;
+  }, [
+    isDungeonMaster,
+    sharedMapState.fogCanvas,
+    sharedMapState.fogVersion,
+    sharedMapState.ratio,
+    token.x,
+    token.y,
+  ]);
+
+  if (isUnderFog) return null;
 
   return (
     <>
@@ -819,9 +845,9 @@ const TokenRenderer = (props: {
             />
           </mesh>
         ) : null}
-        {token.tokenImage ? (
+        {resolvedImageUrl ? (
           <TokenAttachment
-            url={token.tokenImage.url}
+            url={resolvedImageUrl}
             initialRadius={initialRadius}
             dragProps={dragProps}
             isHover={isHover}
@@ -861,7 +887,7 @@ const TokenRenderer = (props: {
             </mesh>
           </>
         ) : null}
-        {values.tokenImageId && token.tokenImage ? null : (
+        {resolvedImageUrl ? null : (
           <mesh {...dragProps()} renderOrder={LayerRenderOrder.tokenGesture}>
             {/* Invisible hit-detection mesh */}
             <circleBufferGeometry
@@ -876,24 +902,25 @@ const TokenRenderer = (props: {
             />
           </mesh>
         )}
+        {/* Eye-off indicator — shown to DM when token is hidden from players */}
+        {isDungeonMaster && !values.isVisibleForPlayers ? (
+          <HiddenFromPlayersIndicator initialRadius={initialRadius} />
+        ) : null}
       </animated.group>
-      {/* Text should not be scaled and thus must be moved to a separate group. */}
+      {/* Text label — outside scaled group so scale doesn't affect font size */}
       {textLabel ? (
         <animated.group
           position={to(
             [animatedProps.circleScale, animatedProps.position],
-            ([scale], [x, y, z]) =>
-              token.tokenImage
-                ? [x, y - 0.04 - initialRadius * scale, z]
-                : [x, y, z]
+            ([scale], [x, y, z]) => [x, y - 0.06 - initialRadius * scale, z]
           )}
           renderOrder={LayerRenderOrder.token}
         >
           <TokenLabel
             text={textLabel}
             position={undefined}
-            backgroundColor={token.tokenImage ? "#ffffff" : null}
-            fontSize={(columnWidth * sharedMapState.ratio) / 930}
+            backgroundColor={resolvedImageUrl ? "#ffffffcc" : null}
+            fontSize={(columnWidth * sharedMapState.ratio) / 1300}
           />
         </animated.group>
       ) : null}
@@ -979,6 +1006,64 @@ const TokenLabel = (props: {
         {props.text}
       </CanvasText>
     </>
+  );
+};
+
+const HiddenFromPlayersIndicator = ({
+  initialRadius,
+}: {
+  initialRadius: number;
+}) => {
+  const texture = React.useMemo(() => {
+    const size = 64;
+    const canvas = document.createElement("canvas");
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext("2d")!;
+    // semi-transparent dark background circle
+    ctx.fillStyle = "rgba(0,0,0,0.55)";
+    ctx.beginPath();
+    ctx.arc(32, 32, 30, 0, Math.PI * 2);
+    ctx.fill();
+    // eye outline
+    ctx.strokeStyle = "#ff8800";
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.ellipse(32, 32, 16, 10, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    // pupil
+    ctx.fillStyle = "#ff8800";
+    ctx.beginPath();
+    ctx.arc(32, 32, 5, 0, Math.PI * 2);
+    ctx.fill();
+    // diagonal slash
+    ctx.strokeStyle = "#ff4400";
+    ctx.lineWidth = 5;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(14, 14);
+    ctx.lineTo(50, 50);
+    ctx.stroke();
+    return new THREE.CanvasTexture(canvas);
+  }, []);
+
+  const indicatorSize = initialRadius * 0.48;
+  return (
+    <mesh
+      position={[initialRadius * 0.65, initialRadius * 0.65, 0.01]}
+      renderOrder={LayerRenderOrder.outline}
+    >
+      <planeBufferGeometry
+        attach="geometry"
+        args={[indicatorSize, indicatorSize]}
+      />
+      <meshBasicMaterial
+        attach="material"
+        map={texture}
+        transparent={true}
+        depthTest={false}
+      />
+    </mesh>
   );
 };
 
@@ -1657,6 +1742,8 @@ const MapViewRenderer = (props: {
     canvas.height = optimalDimensions.height;
     return canvas;
   });
+  const [fogVersion, setFogVersion] = React.useState(0);
+
   const [fogCanvas] = React.useState(() => {
     const canvas = window.document.createElement("canvas");
     canvas.width = optimalDimensions.width;
@@ -1753,6 +1840,7 @@ const MapViewRenderer = (props: {
       context.clearRect(0, 0, fogCanvas.width, fogCanvas.height);
     }
     fogTexture.needsUpdate = true;
+    setFogVersion((v) => v + 1);
   }, [optimalDimensions, fogCanvas, maximumSideLength, props.fogImage]);
 
   // Draw to canvas only for static images (GIF and video use their own textures)
@@ -1855,6 +1943,7 @@ const MapViewRenderer = (props: {
       mapCanvas,
       fogCanvas,
       fogTexture,
+      fogVersion,
       mapState: spring,
       setMapState: set,
       dimensions,
@@ -1891,6 +1980,7 @@ const MapViewRenderer = (props: {
     fogCanvas,
     mapCanvas,
     fogTexture,
+    fogVersion,
     spring,
     set,
     dimensions,

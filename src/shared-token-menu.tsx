@@ -12,7 +12,7 @@ import * as E from "fp-ts/Either";
 import * as io from "io-ts";
 import { ThemedLevaPanel } from "./themed-leva-panel";
 import { ChatPositionContext } from "./authenticated-app-shell";
-import { useSelectedItems } from "./shared-token-state";
+import { useSelectedItems, usePropertiesPanel } from "./shared-token-state";
 import { levaPluginTokenImage } from "./leva-plugin/leva-plugin-token-image";
 import type { sharedTokenMenuUpdateManyMapTokenMutation } from "./__generated__/sharedTokenMenuUpdateManyMapTokenMutation.graphql";
 import type { sharedTokenMenuReferenceNoteQuery } from "./__generated__/sharedTokenMenuReferenceNoteQuery.graphql";
@@ -98,6 +98,9 @@ const useTokenNoteDescriptionState = () =>
 export const SharedTokenMenu = (props: { currentMapId: string }) => {
   const chatPosition = React.useContext(ChatPositionContext);
   const [selectedItems] = useSelectedItems();
+  const [propertiesPanelHidden] = usePropertiesPanel();
+
+  if (propertiesPanelHidden || selectedItems.size === 0) return null;
 
   return (
     <animated.div
@@ -114,7 +117,7 @@ export const SharedTokenMenu = (props: { currentMapId: string }) => {
       }}
       onKeyDown={(ev) => ev.stopPropagation()}
     >
-      {selectedItems.size === 0 ? null : selectedItems.size === 1 ? (
+      {selectedItems.size === 1 ? (
         <SingleTokenPanels store={firstMapValue(selectedItems)} />
       ) : (
         <MultiTokenPanel currentMapId={props.currentMapId} />

@@ -58,7 +58,12 @@ const TokenImageReference = () => {
                     <Button size="xs">Change</Button>
                   </PopoverTrigger>
                   <Portal>
-                    <PopoverContent width="400px">
+                    <PopoverContent
+                      width="400px"
+                      bg="#1a1b2e"
+                      borderColor="#333366"
+                      color="#e8e6e1"
+                    >
                       <TokenImagePopoverContent
                         onSelect={(value) => setValue(value)}
                         onSelectFile={(file, connection) =>

@@ -193,4 +193,110 @@ export const globalStyles = css`
     opacity: 0.35 !important;
     cursor: not-allowed !important;
   }
+
+  /* Chakra UI Popover dark theme */
+  .chakra-popover__content {
+    background-color: #1a1b2e !important;
+    border: 1px solid #333366 !important;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.7) !important;
+    color: #e8e6e1 !important;
+  }
+
+  .chakra-popover__header {
+    background-color: #141524 !important;
+    border-bottom-color: #333366 !important;
+    color: #e8e6e1 !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+  }
+
+  .chakra-popover__body {
+    background-color: #1a1b2e !important;
+    color: #e8e6e1 !important;
+  }
+
+  .chakra-popover__footer {
+    background-color: #141524 !important;
+    border-top-color: #333366 !important;
+  }
+
+  .chakra-popover__close-btn {
+    color: #9ca3af !important;
+  }
+
+  .chakra-popover__close-btn:hover {
+    background-color: #2a2a4e !important;
+    color: #ffffff !important;
+  }
+
+  /* Chakra UI Modal / Dialog dark theme */
+  .chakra-modal__content,
+  .chakra-modal__content-container {
+    background-color: #1a1b2e !important;
+    border: 1px solid #333366 !important;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.8) !important;
+    color: #e8e6e1 !important;
+  }
+
+  .chakra-modal__header {
+    background-color: #141524 !important;
+    color: #e8e6e1 !important;
+    border-bottom: 1px solid #333366 !important;
+    font-size: 14px !important;
+  }
+
+  .chakra-modal__body {
+    background-color: #1a1b2e !important;
+    color: #e8e6e1 !important;
+  }
+
+  .chakra-modal__footer {
+    background-color: #141524 !important;
+    border-top: 1px solid #333366 !important;
+  }
+
+  .chakra-modal__overlay {
+    background-color: rgba(0, 0, 0, 0.75) !important;
+  }
+
+  .chakra-modal__close-btn {
+    color: #9ca3af !important;
+  }
+
+  .chakra-modal__close-btn:hover {
+    background-color: #2a2a4e !important;
+    color: #ffffff !important;
+  }
+
+  /* Chakra Slider dark theme */
+  .chakra-slider__track {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+  }
+
+  .chakra-slider__filled-track {
+    background-color: #60a5fa !important;
+  }
+
+  .chakra-slider__thumb {
+    background-color: #60a5fa !important;
+    border-color: #60a5fa !important;
+  }
+
+  /* Chakra Button secondary dark theme */
+  .chakra-button {
+    font-size: 13px !important;
+  }
+
+  /* Chakra Text/Heading dark */
+  .chakra-heading {
+    color: #e8e6e1 !important;
+  }
+
+  /* Tooltip */
+  .chakra-tooltip {
+    background-color: #2a2a4e !important;
+    color: #e8e6e1 !important;
+    border: 1px solid #333366 !important;
+    font-size: 12px !important;
+  }
 `;

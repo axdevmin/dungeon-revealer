@@ -148,7 +148,7 @@ export const TokenImageCropper = (props: {
               spacing={2}
               padding={3}
               borderRadius={3}
-              background="white"
+              background="#1a1b2e"
               maxHeight={500}
               zIndex={10}
               width="100%"
@@ -175,7 +175,7 @@ export const TokenImageCropper = (props: {
                       <Text
                         paddingTop={3}
                         width="100%"
-                        backgroundColor="white"
+                        color="#e8e6e1"
                         fontSize="xs"
                         maxWidth={100}
                         whiteSpace="nowrap"
@@ -247,7 +247,7 @@ export const TokenImageCropper = (props: {
           justifyContent="center"
         >
           <Stack
-            background="white"
+            background="#1a1b2e"
             padding={5}
             borderRadius={3}
             maxWidth={600}

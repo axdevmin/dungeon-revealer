@@ -26,6 +26,7 @@ export type MapTokenEntity = {
   isLocked: boolean;
   isAlive: boolean;
   tokenType: TokenType;
+  imageUrl: string | null;
   reference: null | {
     type: "note";
     id: string;

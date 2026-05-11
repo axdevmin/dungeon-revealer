@@ -150,6 +150,10 @@ const GraphQLMapTokenUpdateManyPropertiesInput = t.inputObjectType({
       type: t.Boolean,
       description: "Whether the token is alive. Applies to character/creature.",
     },
+    imageUrl: {
+      type: t.String,
+      description: "Static image URL for bundled preset images.",
+    },
   }),
 });
 
@@ -201,6 +205,7 @@ const GraphQLMapTokenAddManyTokenInput = t.inputObjectType({
     tokenImageId: t.arg(t.ID),
     tokenType: t.arg(GraphQLTokenTypeEnum),
     isAlive: t.arg(t.Boolean),
+    imageUrl: t.arg(t.String),
   }),
 });
 
@@ -431,6 +436,7 @@ export const mutationFields = [
             rotation: input.properties.rotation ?? undefined,
             tokenType: (input.properties.tokenType as TokenType) ?? undefined,
             isAlive: input.properties.isAlive ?? undefined,
+            imageUrl: input.properties.imageUrl ?? undefined,
           },
         }),
         context
@@ -704,6 +710,11 @@ const GraphQLMapTokenType = t.objectType<MapTokenEntity>({
       name: "isAlive",
       type: t.NonNull(t.Boolean),
       resolve: (source) => source.isAlive ?? true,
+    }),
+    t.field({
+      name: "imageUrl",
+      type: t.String,
+      resolve: (source) => source.imageUrl ?? null,
     }),
   ],
 });
