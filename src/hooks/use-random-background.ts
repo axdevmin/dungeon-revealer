@@ -13,6 +13,10 @@ const BACKGROUND_IMAGES = [
   "lidda_bunnar.png",
   "reve_khaelen.png",
   "tempete_navire.png",
+  "lidda_myalé_retour.png",
+  "groupe_origin_tavern.png",
+  "groupe_origin_explo.png",
+  "darnell_origin_group.png",
 ];
 
 export const useRandomBackground = (): string => {
