@@ -1,6 +1,6 @@
 {
   "name": "navis",
-  "version": "2.0.5",
+  "version": "2.0.10",
   "description": "Navis - RPG Map Sharing System",
   "bugs": {
     "url": "https://github.com/axdevmin/navis/issues"
@@ -50,6 +50,7 @@
     "connect-busboy": "^1.0.0",
     "express": "^4.22.1",
     "fp-ts": "2.11.5",
+    "framer-motion": "^4.1.17",
     "fs-extra": "9.1.0",
     "gqtx": "^0.8.1-e6f907e5.0",
     "graphql": "15.6.1",

@@ -1,0 +1,131 @@
+diff --git a/node_modules/relay-compiler-language-typescript/lib/TypeScriptGenerator.js b/node_modules/relay-compiler-language-typescript/lib/TypeScriptGenerator.js
+index 399f0ed..f559680 100644
+--- a/node_modules/relay-compiler-language-typescript/lib/TypeScriptGenerator.js
++++ b/node_modules/relay-compiler-language-typescript/lib/TypeScriptGenerator.js
+@@ -50,6 +50,31 @@ var MatchTransform = require("relay-compiler/lib/transforms/MatchTransform");
+ var RefetchableFragmentTransform = require("relay-compiler/lib/transforms/RefetchableFragmentTransform");
+ var RelayDirectiveTransform = require("relay-compiler/lib/transforms/RelayDirectiveTransform");
+ var ts = require("typescript");
++// TS5 compat: factory methods moved from ts.* to ts.factory.*; some signatures changed
++if (ts.factory && !ts.createKeywordTypeNode) {
++    var f = ts.factory;
++    ts.createKeywordTypeNode = f.createKeywordTypeNode.bind(f);
++    ts.createUnionTypeNode = f.createUnionTypeNode.bind(f);
++    ts.createTypeReferenceNode = f.createTypeReferenceNode.bind(f);
++    ts.createIdentifier = f.createIdentifier.bind(f);
++    ts.createToken = f.createToken.bind(f);
++    ts.createTypeLiteralNode = f.createTypeLiteralNode.bind(f);
++    ts.createLiteralTypeNode = f.createLiteralTypeNode.bind(f);
++    ts.createNamedImports = f.createNamedImports.bind(f);
++    ts.createStringLiteral = f.createStringLiteral.bind(f);
++    ts.createLiteral = function(value) { return typeof value === 'string' ? f.createStringLiteral(value) : f.createNumericLiteral(String(value)); };
++    ts.createPropertySignature = function(modifiers, name, questionToken, type) { return f.createPropertySignature(modifiers, name, questionToken, type); };
++    // TS5 removed decorators param: createImportDeclaration(decorators?, modifiers?, ...) -> (modifiers?, ...)
++    ts.createImportDeclaration = function(_decorators, modifiers, importClause, moduleSpecifier) { return f.createImportDeclaration(modifiers, importClause, moduleSpecifier); };
++    // TS5 added isTypeOnly param: createImportClause(name?, namedBindings?) -> (isTypeOnly, name, namedBindings)
++    ts.createImportClause = function(_name, namedBindings) { return f.createImportClause(false, _name || undefined, namedBindings); };
++    // TS5 added isTypeOnly param: createImportSpecifier(propertyName?, name) -> (isTypeOnly, propertyName, name)
++    ts.createImportSpecifier = function(_propertyName, name) { return f.createImportSpecifier(false, _propertyName || undefined, name); };
++    // TS5 removed decorators param: createTypeAliasDeclaration(decorators?, modifiers?, ...) -> (modifiers?, ...)
++    ts.createTypeAliasDeclaration = function(_decorators, modifiers, name, typeParameters, type) { return f.createTypeAliasDeclaration(modifiers, name, typeParameters, type); };
++    // TS5: updateSourceFileNode removed, use factory.updateSourceFile
++    ts.updateSourceFileNode = function(node, statements) { return f.updateSourceFile(node, statements); };
++}
+ var TypeScriptTypeTransformers_1 = require("./TypeScriptTypeTransformers");
+ var REF_TYPE = " $refType";
+ var FRAGMENT_REFS = " $fragmentRefs";
+diff --git a/node_modules/relay-compiler-language-typescript/lib/TypeScriptTypeTransformers.js b/node_modules/relay-compiler-language-typescript/lib/TypeScriptTypeTransformers.js
+index 1dd2dc2..44f8b37 100644
+--- a/node_modules/relay-compiler-language-typescript/lib/TypeScriptTypeTransformers.js
++++ b/node_modules/relay-compiler-language-typescript/lib/TypeScriptTypeTransformers.js
+@@ -2,6 +2,17 @@
+ Object.defineProperty(exports, "__esModule", { value: true });
+ exports.transformInputType = exports.transformScalarType = void 0;
+ var ts = require("typescript");
++// TS5 compat: factory methods moved from ts.* to ts.factory.*
++if (ts.factory && !ts.createKeywordTypeNode) {
++    var f = ts.factory;
++    ts.createKeywordTypeNode = f.createKeywordTypeNode.bind(f);
++    ts.createUnionTypeNode = f.createUnionTypeNode.bind(f);
++    ts.createTypeReferenceNode = f.createTypeReferenceNode.bind(f);
++    ts.createIdentifier = f.createIdentifier.bind(f);
++    ts.createToken = f.createToken.bind(f);
++    ts.createTypeLiteralNode = f.createTypeLiteralNode.bind(f);
++    ts.createPropertySignature = function(modifiers, name, questionToken, type) { return f.createPropertySignature(modifiers, name, questionToken, type); };
++}
+ function getInputObjectTypeIdentifier(schema, typeID) {
+     return schema.getTypeString(typeID);
+ }
+diff --git a/node_modules/relay-compiler-language-typescript/lib/formatGeneratedModule.js b/node_modules/relay-compiler-language-typescript/lib/formatGeneratedModule.js
+index 22c9e4b..913c6fe 100644
+--- a/node_modules/relay-compiler-language-typescript/lib/formatGeneratedModule.js
++++ b/node_modules/relay-compiler-language-typescript/lib/formatGeneratedModule.js
+@@ -2,6 +2,37 @@
+ Object.defineProperty(exports, "__esModule", { value: true });
+ exports.formatterFactory = void 0;
+ var addAnyTypeCast_1 = require("./addAnyTypeCast");
++
++const createRequireRegex = () => /require\('(.*)'\)/g;
++const escapeRegexString = (str) =>
++  str.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&");
++
++  // collects all require calls and converts them to top level imports
++const requireToImport = (content) => {
++    const requirePaths = new Set();
++    const regex = createRequireRegex();
++    let result = null;
++    while (true) {
++      result = regex.exec(content);
++      if (result === null) {
++        break;
++      }
++      requirePaths.add(result[1]);
++    }
++  
++    for (const requirePath of requirePaths) {
++      const [baseName] = requirePath.replace("./", "").split(".");
++      content =
++        `import ${baseName} from "${requirePath.replace(".ts", "")}";\n` +
++        content.replace(
++          new RegExp(escapeRegexString(`require('${requirePath}')`), "g"),
++          baseName
++        );
++    }
++  
++    return content;
++  };
++
+ var formatterFactory = function (compilerOptions) {
+     if (compilerOptions === void 0) { compilerOptions = {}; }
+     return function (_a) {
+@@ -10,12 +41,27 @@ var formatterFactory = function (compilerOptions) {
+             ? "import { " + documentType + " } from \"relay-runtime\";"
+             : "";
+         var docTextComment = docText ? "\n/*\n" + docText.trim() + "\n*/\n" : "";
+-        var nodeStatement = "const node: " + (documentType ||
+-            "never") + " = " + concreteText + ";";
++        let nodeStatement = `const node: ${
++        documentType || "never"
++        } = ${concreteText};`;
+         if (compilerOptions.noImplicitAny) {
+             nodeStatement = addAnyTypeCast_1.default(nodeStatement).trim();
+         }
+-        return "/* tslint:disable */\n/* eslint-disable */\n// @ts-nocheck\n" + (hash ? "/* " + hash + " */\n" : "") + "\n" + documentTypeImport + "\n" + (typeText || "") + "\n\n" + docTextComment + "\n" + nodeStatement + "\n(node as any).hash = '" + sourceHash + "';\nexport default node;\n";
++
++        const rawContent = `${typeText || ""}
++${docTextComment}
++${nodeStatement}
++(node as any).hash = '${sourceHash}';
++export default node;
++`;
++
++        const content = `/* tslint:disable */
++/* eslint-disable */
++// @ts-nocheck
++${hash ? `/* ${hash} */\n` : ""}
++${documentTypeImport}
++${requireToImport(rawContent)}`;
++        return content;
+     };
+ };
+ exports.formatterFactory = formatterFactory;
