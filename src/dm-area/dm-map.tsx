@@ -92,6 +92,7 @@ import { dmMap_GridSettingButton_MapFragment$key } from "./__generated__/dmMap_G
 import { dmMap_mapUpdateGridMutation } from "./__generated__/dmMap_mapUpdateGridMutation.graphql";
 import { dmMap_GridConfigurator_MapFragment$key } from "./__generated__/dmMap_GridConfigurator_MapFragment.graphql";
 import { dmMap_MapPingMutation } from "./__generated__/dmMap_MapPingMutation.graphql";
+import { dmMap_RollDiceMutation } from "./__generated__/dmMap_RollDiceMutation.graphql";
 import { WeatherControls } from "./weather-controls";
 import { dmMap_WeatherButton_MapFragment$key } from "./__generated__/dmMap_WeatherButton_MapFragment.graphql";
 import { TokenLibrary } from "./token-library";
@@ -599,6 +600,92 @@ const WeatherButton = (props: {
   );
 };
 
+const RollDiceMutation = graphql`
+  mutation dmMap_RollDiceMutation($input: RollDiceInput!) {
+    rollDice(input: $input)
+  }
+`;
+
+const DICE_TYPES = ["d4", "d6", "d8", "d10", "d12", "d20", "d100"] as const;
+
+const DICE_BUTTON_COLORS: Record<string, string> = {
+  d4: "#22c55e",
+  d6: "#3b82f6",
+  d8: "#a855f7",
+  d10: "#f97316",
+  d12: "#ec4899",
+  d20: "#ef4444",
+  d100: "#6366f1",
+};
+
+const DiceButton = ({ mapId }: { mapId: string }): React.ReactElement => {
+  const [isOpen, setIsOpen] = React.useState(false);
+  const ref = React.useRef<HTMLDivElement>(null);
+  useOnClickOutside(ref, () => setIsOpen(false));
+  const [rollDice] = useMutation<dmMap_RollDiceMutation>(RollDiceMutation);
+
+  return (
+    <div ref={ref} style={{ position: "relative" }}>
+      <Toolbar.Item isActive>
+        <Toolbar.Button onClick={() => setIsOpen((v) => !v)}>
+          <Icon.Dice boxSize="20px" />
+          <Icon.Label>Dés</Icon.Label>
+        </Toolbar.Button>
+      </Toolbar.Item>
+      {isOpen ? (
+        <div
+          style={{
+            position: "absolute",
+            bottom: "100%",
+            left: 0,
+            zIndex: 10,
+            background: "#1a202c",
+            border: "1px solid #2d3748",
+            borderRadius: "10px",
+            padding: "8px",
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: "5px",
+            minWidth: "130px",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+          }}
+        >
+          {DICE_TYPES.map((diceType) => (
+            <button
+              key={diceType}
+              onClick={() => {
+                rollDice({ variables: { input: { mapId, diceType } } });
+                setIsOpen(false);
+              }}
+              style={{
+                background: DICE_BUTTON_COLORS[diceType],
+                color: "white",
+                border: "none",
+                borderRadius: "6px",
+                padding: "7px 4px",
+                cursor: "pointer",
+                fontSize: "13px",
+                fontWeight: "bold",
+                letterSpacing: "0.5px",
+                transition: "filter 0.15s",
+              }}
+              onMouseEnter={(e) =>
+                ((e.target as HTMLButtonElement).style.filter =
+                  "brightness(1.2)")
+              }
+              onMouseLeave={(e) =>
+                ((e.target as HTMLButtonElement).style.filter = "none")
+              }
+            >
+              {diceType.toUpperCase()}
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+};
+
 const dmNavigationTools: Array<ToolMapRecord> = [
   {
     name: "Déplacer",
@@ -1023,6 +1110,7 @@ export const DmMap = (props: {
                   }}
                 />
                 <WeatherButton map={map} />
+                <DiceButton mapId={map.id} />
                 <TokenLibraryButton />
                 <Toolbar.Item isActive>
                   <Toolbar.Button

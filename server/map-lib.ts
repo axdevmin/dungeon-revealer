@@ -430,6 +430,13 @@ export type MapPing = {
   y: number;
 };
 
+export type DiceRollEvent = {
+  id: string;
+  diceType: string;
+  result: number;
+};
+
 export type MapPubSubConfig = {
   mapPing: [id: string, mapPing: MapPing];
+  diceRoll: [id: string, diceRoll: DiceRollEvent];
 };
