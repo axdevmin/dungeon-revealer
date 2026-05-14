@@ -1,7 +1,6 @@
 import * as React from "react";
 import * as THREE from "three";
 import graphql from "babel-plugin-relay/macro";
-import { useFrame } from "react-three-fiber";
 import { animated, useSpring } from "@react-spring/three";
 import { useSubscription } from "relay-hooks";
 import { CanvasText } from "./canvas-text";
@@ -25,7 +24,81 @@ const DICE_COLORS: Record<DiceType, string> = {
   d100: "#6366f1",
 };
 
-const ROLL_DURATION = 2500;
+const ROLL_DURATION = 3200; // ms
+const SPINS = 2;            // full rotations before settling
+// easeOutCubic: derivative at t=0 is 3× average → natural deceleration
+const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
+
+/**
+ * Target rotation the die settles on after rolling.
+ * SPINS full rotations + a final pose that tilts the die toward the camera so
+ * the top face is clearly visible (X tilt ≈ 63°, slight Y rotation, no Z lean).
+ */
+function getTargetRotation(): [number, number, number] {
+  const tau = Math.PI * 2;
+  return [
+    SPINS * tau + Math.PI * 0.35, // decelerate → lean toward camera
+    SPINS * tau + Math.PI * 0.3,  // end with a slight Y turn for visual interest
+    0,
+  ];
+}
+
+/**
+ * Pentagonal trapezohedron — the real shape of a d10.
+ * 10 kite-shaped faces, 12 vertices (2 poles + 5 upper + 5 lower equatorial).
+ *
+ * For planar kite faces the constraint is h/m ≈ 9.49 (derived from coplanarity
+ * of the four kite vertices). With m=0.050 → h=0.475, giving a realistic
+ * aspect ratio (height ≈ diameter) and truly flat faces.
+ */
+function buildD10Geometry(): THREE.BufferGeometry {
+  const h = 0.475; // pole height  (h/m ≈ 9.49 → planar kite faces)
+  const m = 0.050; // equatorial band height offset
+  const r = 0.44;  // equatorial radius
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+
+  const T = [0, h, 0];
+  const B = [0, -h, 0];
+  const U: number[][] = [];
+  const L: number[][] = [];
+
+  for (let i = 0; i < 5; i++) {
+    const a = toRad(i * 72);
+    U.push([r * Math.cos(a), m, r * Math.sin(a)]);
+  }
+  for (let i = 0; i < 5; i++) {
+    const a = toRad(36 + i * 72);
+    L.push([r * Math.cos(a), -m, r * Math.sin(a)]);
+  }
+
+  const positions: number[] = [];
+  const addTri = (a: number[], b: number[], c: number[]) =>
+    positions.push(...a, ...b, ...c);
+
+  for (let i = 0; i < 5; i++) {
+    const next = (i + 1) % 5;
+    // Upper kite face (winding verified CCW from outside)
+    addTri(T, L[i], U[i]);
+    addTri(T, U[next], L[i]);
+    // Lower kite face
+    addTri(B, L[i], U[next]);
+    addTri(B, U[next], L[next]);
+  }
+
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute(
+    "position",
+    new THREE.BufferAttribute(new Float32Array(positions), 3)
+  );
+  geo.computeVertexNormals();
+  return geo;
+}
+
+const D10Geometry = () => {
+  const geo = React.useMemo(() => buildD10Geometry(), []);
+  React.useEffect(() => () => geo.dispose(), [geo]);
+  return <primitive attach="geometry" object={geo} />;
+};
 
 const DiceGeometry = ({ diceType }: { diceType: DiceType }) => {
   switch (diceType) {
@@ -36,13 +109,62 @@ const DiceGeometry = ({ diceType }: { diceType: DiceType }) => {
     case "d8":
       return <octahedronBufferGeometry args={[0.48, 0]} />;
     case "d10":
+      return <D10Geometry />;
+    // d100 (Zocchihedron) ≈ geodesic sphere — icosphere detail=1 → 80 triangular faces
     case "d100":
-      return <coneBufferGeometry args={[0.36, 0.62, 10, 1]} />;
+      return <icosahedronBufferGeometry args={[0.46, 1]} />;
     case "d12":
       return <dodecahedronBufferGeometry args={[0.44, 0]} />;
     case "d20":
       return <icosahedronBufferGeometry args={[0.46, 0]} />;
   }
+};
+
+/**
+ * Renders the edge lines (contour) of the die — makes the 3-D shape readable
+ * on a solid-coloured mesh. Uses EdgesGeometry which skips internal edges
+ * (dihedral angle < 15°, e.g. the kite diagonals on a d10).
+ */
+const DiceEdges = ({ diceType }: { diceType: DiceType }) => {
+  const geo = React.useMemo(() => {
+    let base: THREE.BufferGeometry;
+    switch (diceType) {
+      case "d4":
+        base = new THREE.TetrahedronBufferGeometry(0.42, 0);
+        break;
+      case "d6":
+        base = new THREE.BoxBufferGeometry(0.55, 0.55, 0.55);
+        break;
+      case "d8":
+        base = new THREE.OctahedronBufferGeometry(0.48, 0);
+        break;
+      case "d10":
+        base = buildD10Geometry();
+        break;
+      case "d100":
+        base = new THREE.IcosahedronBufferGeometry(0.46, 1);
+        break;
+      case "d12":
+        base = new THREE.DodecahedronBufferGeometry(0.44, 0);
+        break;
+      case "d20":
+        base = new THREE.IcosahedronBufferGeometry(0.46, 0);
+        break;
+    }
+    // threshold 15° → skips nearly-flat internal edges, keeps true face borders
+    const edges = new THREE.EdgesGeometry(base, 15);
+    base.dispose();
+    return edges;
+  }, [diceType]);
+
+  React.useEffect(() => () => geo.dispose(), [geo]);
+
+  return (
+    <lineSegments renderOrder={17}>
+      <primitive attach="geometry" object={geo} />
+      <lineBasicMaterial attach="material" color="#ffffff" opacity={0.85} transparent />
+    </lineSegments>
+  );
 };
 
 const DiceRollItem = ({
@@ -52,14 +174,17 @@ const DiceRollItem = ({
   event: DiceRollEventData;
   onRemove: () => void;
 }) => {
-  const meshRef = React.useRef<THREE.Mesh>(null);
-  const startTime = React.useRef(Date.now());
   const [showResult, setShowResult] = React.useState(false);
 
   const [spring, setSpring] = useSpring(() => ({
     position: [0, 2.5, 1.5] as [number, number, number],
-    dieOpacity: 0,
-    groupScale: 0.3,
+    groupScale: 0,
+  }));
+
+  // Rotation spring: starts at zero, spins with easeOutQuart then settles
+  // face-forward toward the camera.
+  const [rotSpring, setRotSpring] = useSpring(() => ({
+    rot: [0, 0, 0] as [number, number, number],
   }));
 
   const [resultSpring, setResultSpring] = useSpring(() => ({
@@ -69,9 +194,13 @@ const DiceRollItem = ({
   React.useEffect(() => {
     setSpring({
       position: [0, 0, 1.5] as [number, number, number],
-      dieOpacity: 1,
       groupScale: 1,
       config: { tension: 140, friction: 18 },
+    });
+
+    setRotSpring({
+      rot: getTargetRotation(),
+      config: { duration: ROLL_DURATION, easing: easeOutCubic },
     });
 
     const landTimer = setTimeout(() => {
@@ -83,11 +212,11 @@ const DiceRollItem = ({
     }, ROLL_DURATION);
 
     const fadeTimer = setTimeout(() => {
-      setSpring({ dieOpacity: 0, groupScale: 0.5, config: { duration: 600 } });
+      setSpring({ groupScale: 0, config: { duration: 600 } });
       setResultSpring({ scale: 0, config: { duration: 500 } });
-    }, 4500);
+    }, ROLL_DURATION + 2000);
 
-    const removeTimer = setTimeout(onRemove, 5300);
+    const removeTimer = setTimeout(onRemove, ROLL_DURATION + 2800);
 
     return () => {
       clearTimeout(landTimer);
@@ -95,18 +224,6 @@ const DiceRollItem = ({
       clearTimeout(removeTimer);
     };
   }, []);
-
-  useFrame((_, delta) => {
-    if (!meshRef.current) return;
-    const elapsed = Date.now() - startTime.current;
-    const progress = Math.min(elapsed / ROLL_DURATION, 1);
-    if (progress < 1) {
-      const speed = Math.pow(1 - progress, 1.5) * 10;
-      meshRef.current.rotation.x += speed * delta;
-      meshRef.current.rotation.y += speed * 0.73 * delta;
-      meshRef.current.rotation.z += speed * 0.45 * delta;
-    }
-  });
 
   const diceType = event.diceType as DiceType;
   const color = DICE_COLORS[diceType] ?? "#6366f1";
@@ -118,23 +235,23 @@ const DiceRollItem = ({
         (s) => [s, s, s] as [number, number, number]
       )}
     >
-      <mesh ref={meshRef} renderOrder={15}>
-        <DiceGeometry diceType={diceType} />
-        {/* eslint-disable-next-line @typescript-eslint/ban-ts-comment */}
-        {/* @ts-ignore – react-spring/three animated material with many props hits TS2589 */}
-        <animated.meshStandardMaterial
-          attach="material"
-          color={color}
-          metalness={0.25}
-          roughness={0.3}
-          transparent
-          depthWrite={false}
-          opacity={spring.dieOpacity}
-        />
-      </mesh>
+      {/* Spring-driven rotation settles face-forward toward camera */}
+      {/* @ts-ignore – animated.group rotation with SpringValue hits TS2589 */}
+      <animated.group rotation={rotSpring.rot}>
+        <mesh renderOrder={15}>
+          <DiceGeometry diceType={diceType} />
+          <meshStandardMaterial
+            attach="material"
+            color={color}
+            metalness={0.25}
+            roughness={0.3}
+          />
+        </mesh>
+        <DiceEdges diceType={diceType} />
+      </animated.group>
       {showResult && (
         <animated.group
-          position={[0, 0.9, 0]}
+          position={[0, 1.6, 0]}
           scale={resultSpring.scale.to(
             (s) => [s, s, s] as [number, number, number]
           )}
