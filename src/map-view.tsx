@@ -55,6 +55,7 @@ import { IsDungeonMasterContext } from "./is-dungeon-master-context";
 import { WeatherSystem } from "./weather-system";
 import type { WeatherSettings } from "./weather-types";
 import { APP_VERSION } from "./version";
+import { DiceRollRenderer } from "./dice-roll-renderer";
 
 type Vector2D = [number, number];
 
@@ -1695,6 +1696,7 @@ const MapViewRendererFragment = graphql`
 
 const MapViewRenderer = (props: {
   map: mapView_MapViewRendererFragment$key;
+  mapId: string;
   weatherConfig: WeatherSettings;
   mapImage: HTMLImageElement | null;
   mapVideo: HTMLVideoElement | null;
@@ -2112,6 +2114,7 @@ const MapViewRenderer = (props: {
           }}
         />
       </Plane>
+      <DiceRollRenderer mapId={props.mapId} />
     </SharedMapState.Provider>
   );
 };
@@ -2392,6 +2395,7 @@ export const MapView = (props: {
         <MapViewRenderer
           key={map.id}
           map={map}
+          mapId={map.id}
           weatherConfig={
             (map.weatherSettings as WeatherSettings | null) ?? {
               type: "none",

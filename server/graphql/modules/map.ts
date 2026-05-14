@@ -414,6 +414,18 @@ const GraphQLMapPingInputType = t.inputObjectType({
   }),
 });
 
+const GraphQLRollDiceInputType = t.inputObjectType({
+  name: "RollDiceInput",
+  fields: () => ({
+    mapId: {
+      type: t.NonNullInput(t.ID),
+    },
+    diceType: {
+      type: t.NonNullInput(t.String),
+    },
+  }),
+});
+
 export const mutationFields = [
   t.field({
     name: "mapTokenUpdateMany",
@@ -597,6 +609,26 @@ export const mutationFields = [
         x: args.input.x,
         y: args.input.y,
         id: randomUUID(),
+      });
+      return null;
+    },
+  }),
+  t.field({
+    name: "rollDice",
+    description: "Roll a die and broadcast the result to all map viewers.",
+    type: t.Boolean,
+    args: {
+      input: t.arg(t.NonNullInput(GraphQLRollDiceInputType)),
+    },
+    resolve: (_, args, context) => {
+      const { mapId, diceType } = args.input;
+      const sides = parseInt(diceType.replace("d", ""), 10);
+      if (isNaN(sides) || sides < 2) return null;
+      const result = Math.floor(Math.random() * sides) + 1;
+      context.pubSub.publish("diceRoll", mapId, {
+        id: randomUUID(),
+        diceType,
+        result,
       });
       return null;
     },
@@ -1001,6 +1033,24 @@ const GraphQLMapPingType = t.objectType<lib.MapPing>({
   ],
 });
 
+const GraphQLDiceRollEventType = t.objectType<lib.DiceRollEvent>({
+  name: "DiceRollEvent",
+  fields: () => [
+    t.field({
+      name: "id",
+      type: t.NonNull(t.ID),
+    }),
+    t.field({
+      name: "diceType",
+      type: t.NonNull(t.String),
+    }),
+    t.field({
+      name: "result",
+      type: t.NonNull(t.Int),
+    }),
+  ],
+});
+
 export const subscriptionFields = [
   t.subscriptionField({
     name: "mapPing",
@@ -1010,5 +1060,14 @@ export const subscriptionFields = [
     },
     subscribe: (_, args, context) =>
       context.pubSub.subscribe("mapPing", args.mapId),
+  }),
+  t.subscriptionField({
+    name: "diceRoll",
+    type: t.NonNull(GraphQLDiceRollEventType),
+    args: {
+      mapId: t.arg(t.NonNullInput(t.ID)),
+    },
+    subscribe: (_, args, context) =>
+      context.pubSub.subscribe("diceRoll", args.mapId),
   }),
 ];

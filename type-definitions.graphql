@@ -489,6 +489,10 @@ type Mutation {
   Ping a point on the map.
   """
   mapPing(input: MapPingInput!): Boolean
+  """
+  Roll a die and broadcast the result to all map viewers.
+  """
+  rollDice(input: RollDiceInput!): Boolean
 }
 
 type LogInResult {
@@ -853,6 +857,11 @@ input MapPingInput {
   y: Float!
 }
 
+input RollDiceInput {
+  mapId: ID!
+  diceType: String!
+}
+
 type Subscription {
   userUpdate: UserUpdateSubscription!
   chatMessagesAdded: ChatMessagesAddedSubscription!
@@ -862,6 +871,7 @@ type Subscription {
     hasNextPage: Boolean!
   ): NotesUpdates!
   mapPing(mapId: ID!): MapPing!
+  diceRoll(mapId: ID!): DiceRollEvent!
 }
 
 union UserUpdateSubscription =
@@ -926,4 +936,10 @@ type MapPing {
   id: ID!
   x: Float!
   y: Float!
+}
+
+type DiceRollEvent {
+  id: ID!
+  diceType: String!
+  result: Int!
 }
