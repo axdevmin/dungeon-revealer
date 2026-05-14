@@ -38,7 +38,7 @@ const Inner = styled.div`
 export const BackgroundImageContainer: React.FC<{}> = ({ children }) => {
   const bgImage = useRandomBackground();
   return (
-    <Container bgImage={bgImage}>
+    <Container bgImage={bgImage ?? ""}>
       <Inner>{children}</Inner>
     </Container>
   );

@@ -146,6 +146,57 @@ export const bootstrapServer = async (env: ReturnType<typeof getEnv>) => {
     });
   });
 
+  const SUPPORTED_IMAGE_EXTENSIONS = new Set([
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".webp",
+    ".gif",
+  ]);
+
+  const builtinBackgroundsPath = path.join(
+    env.PUBLIC_PATH,
+    "images",
+    "backgrounds"
+  );
+  const customBackgroundsPath = path.join(env.DATA_DIRECTORY, "backgrounds");
+  fs.mkdirpSync(customBackgroundsPath);
+
+  apiRouter.get("/backgrounds", async (req, res) => {
+    const readImages = async (dir: string, urlPrefix: string) => {
+      try {
+        const files = await fs.readdir(dir);
+        return files
+          .filter((f) =>
+            SUPPORTED_IMAGE_EXTENSIONS.has(
+              path.extname(f).toLowerCase()
+            )
+          )
+          .map((f) => `${urlPrefix}/${encodeURIComponent(f)}`);
+      } catch {
+        return [];
+      }
+    };
+
+    const [builtin, custom] = await Promise.all([
+      readImages(builtinBackgroundsPath, "/images/backgrounds"),
+      readImages(customBackgroundsPath, "/api/backgrounds"),
+    ]);
+
+    res.json({ data: { images: [...builtin, ...custom] } });
+  });
+
+  apiRouter.get("/backgrounds/:filename", async (req, res) => {
+    const filename = path.basename(req.params.filename);
+    const filePath = path.join(customBackgroundsPath, filename);
+
+    if (!(await fs.pathExists(filePath))) {
+      return res.status(404).json({ error: "Not found" });
+    }
+
+    return res.sendFile(filePath);
+  });
+
   apiRouter.get("/active-map", requiresPcRole, (req, res) => {
     let activeMap = null;
     const activeMapId = settings.get("currentMapId");
