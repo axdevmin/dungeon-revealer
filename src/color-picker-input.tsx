@@ -38,7 +38,7 @@ export const ColorPickerInput = (props: {
         width="55px"
         children={
           <>
-            <Popover>
+            <Popover closeOnBlur={false} isLazy>
               <PopoverTrigger>
                 <Box
                   as="button"

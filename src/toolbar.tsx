@@ -145,7 +145,7 @@ const ToolbarItemPopupContainer = styled.div<{ horizontal?: boolean }>`
   filter: none;
   min-width: 200px;
   z-index: 100;
-  overflow: hidden;
+  overflow: visible;
 `;
 
 const ToolbarItemPopup = React.forwardRef<
